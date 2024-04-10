@@ -1,0 +1,277 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountType {
+  COACH
+  CUSTOMER
+}
+
+model Account {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String?
+  password          String
+  accountType       AccountType
+  protocols         Protocol[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  meals             Meal[]
+  trains            Train[]
+  exercises         Exercise[]
+  hormones          Hormone[]
+  extraCompounds    ExtraCompounds[]
+  diets             Diet[]
+  hormonalProtocols HormonalProtocol[]
+  coach             Account?           @relation("CoachAccount", fields: [coachId], references: [id])
+  coachId           String?
+  clients           Account[]          @relation("CoachAccount")
+  Food              Food[]
+}
+
+enum WeekDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model Train {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  exercises   Exercise[]
+  weekDay     WeekDay?
+  protocol    Protocol?  @relation(fields: [protocolId], references: [id])
+  protocolId  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  account     Account    @relation(fields: [accountId], references: [id])
+  accountId   String
+}
+
+enum ExerciseType {
+  CARDIO
+  STRETCHING
+  STRENGHT
+}
+
+model Reps {
+  id        String   @id @default(cuid())
+  quantity  Int
+  weight    Float
+  setType   SetType?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sets      Sets     @relation(fields: [setsId], references: [id])
+  setsId    String
+}
+
+enum SetType {
+  WARM_UP
+  WORKING
+  FEEDER
+  TOP
+  BACK_OFF
+}
+
+model Sets {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  exerciseId String
+  reps       Reps[]
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+  CALVES
+  ABS
+  QUADS
+  HAMSTRINGS
+  GLUTES
+  ADDUCTORS
+  ABDUCTORS
+  TRAPS
+  LATS
+  LOWER_BACK
+  OBLIQUES
+  NECK
+}
+
+model Exercise {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  sets        Sets[]
+  totalTime   Int
+  type        ExerciseType? @default(STRENGHT)
+  muscleGroup MuscleGroup?
+  equipment   String?
+  difficulty  Int           @default(1)
+  imageUrl    String?
+  train       Train?        @relation(fields: [trainId], references: [id])
+  trainId     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  account     Account       @relation(fields: [accountId], references: [id])
+  accountId   String
+}
+
+model Diet {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  meals       Meal[]
+  protocol    Protocol? @relation(fields: [protocolId], references: [id])
+  protocolId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  account     Account   @relation(fields: [accountId], references: [id])
+  accountId   String
+}
+
+enum MealUnit {
+  GR
+  ML
+  UNIT
+}
+
+enum MealType {
+  BREAKFAST
+  MORNING_SNACK
+  LUNCH
+  AFTERNOON_SNACK
+  DINNER
+}
+
+model Meal {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  foods         Food[]
+  mealType      MealType
+  totalCalories Float?
+  totalProteins Float?
+  totalCarbs    Float?
+  totalFats     Float?
+  diet          Diet?    @relation(fields: [dietId], references: [id])
+  dietId        String?
+  account       Account  @relation(fields: [accountId], references: [id])
+  accountId     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Food {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  quantity    Float?
+  unit        MealUnit?
+  calories    Float?
+  proteins    Float?
+  carbs       Float?
+  fats        Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  meal        Meal?     @relation(fields: [mealId], references: [id])
+  mealId      String?
+  account     Account?  @relation(fields: [accountId], references: [id])
+  accountId   String?
+}
+
+enum HormoneType {
+  NINETEEN_NOR
+  DHT
+  TESTOSTERONE
+  PEPTIDE
+  INSULIN
+  TIREOID
+}
+
+enum HormoneUnit {
+  MG
+  ML
+  UI
+  UNIT
+}
+
+model Hormone {
+  id                 String             @id @default(cuid())
+  name               String
+  description        String?
+  quantity           Float
+  concentration      Float
+  unit               HormoneUnit
+  concentrationUnit  ConcentrationUnit?
+  hormoneType        HormoneType
+  hormonalProtocol   HormonalProtocol?  @relation(fields: [hormonalProtocolId], references: [id])
+  hormonalProtocolId String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  account            Account?           @relation(fields: [accountId], references: [id])
+  accountId          String?
+}
+
+model ExtraCompounds {
+  id                String             @id @default(cuid())
+  name              String
+  description       String?
+  quantity          Float
+  concentration     Float
+  unit              HormoneUnit
+  concentrationUnit ConcentrationUnit?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  protocol          Protocol?          @relation(fields: [protocolId], references: [id])
+  protocolId        String?
+  account           Account?           @relation(fields: [accountId], references: [id])
+  accountId         String?
+}
+
+model HormonalProtocol {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  hormones    Hormone[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  protocol    Protocol? @relation(fields: [protocolId], references: [id])
+  protocolId  String?
+  account     Account?  @relation(fields: [accountId], references: [id])
+  accountId   String?
+}
+
+enum ConcentrationUnit {
+  MG_ML
+  MG
+}
+
+model Protocol {
+  id                String             @id @default(cuid())
+  name              String
+  description       String?
+  hormonalProtocols HormonalProtocol[]
+  trains            Train[]
+  diets             Diet[]
+  extraCompounds    ExtraCompounds[]
+  account           Account?           @relation(fields: [accountId], references: [id])
+  accountId         String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}

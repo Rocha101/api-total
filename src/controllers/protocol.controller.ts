@@ -1,0 +1,118 @@
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import { object, string } from "zod";
+import { getAccountId } from "../utils/getAccountId";
+
+const prisma = new PrismaClient();
+
+// Zod schema for validating the request body when creating or updating a protocol
+const protocolSchema = object({
+  name: string(),
+  description: string().optional(),
+  accountId: string(),
+});
+
+// GET /protocols
+const getAllProtocols = async (req: Request, res: Response) => {
+  try {
+    const protocols = await prisma.protocol.findMany({
+      include: {
+        diets: true,
+        trains: true,
+        hormonalProtocols: true,
+      },
+    });
+    res.json(protocols);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// GET /protocols/:id
+const getProtocolById = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const protocol = await prisma.protocol.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        diets: true,
+        trains: true,
+        hormonalProtocols: true,
+      },
+    });
+    if (!protocol) {
+      res.status(404).json({ error: "Protocol not found" });
+    } else {
+      res.json(protocol);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// POST /protocols
+const createProtocol = async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req, res);
+    const body = { ...req.body, accountId };
+    const validatedData = protocolSchema.parse(body);
+    const protocol = await prisma.protocol.create({
+      data: validatedData,
+    });
+    res.status(201).json(protocol);
+  } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+};
+
+// PUT /protocols/:id
+const updateProtocol = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const accountId = await getAccountId(req, res);
+    const body = { ...req.body, accountId };
+    const validatedData = protocolSchema.parse(body);
+    const updatedProtocol = await prisma.protocol.update({
+      where: {
+        id,
+      },
+      data: validatedData,
+    });
+    res.json(updatedProtocol);
+  } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+};
+
+// DELETE /protocols/:id
+const deleteProtocol = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await prisma.protocol.delete({
+      where: {
+        id,
+      },
+    });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export default {
+  getAllProtocols,
+  getProtocolById,
+  createProtocol,
+  updateProtocol,
+  deleteProtocol,
+};

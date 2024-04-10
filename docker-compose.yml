@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:alpine
+    volumes:
+      - ./banco-api-total:/var/lib/postgresql/data
+    restart: always
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    ports:
+      - "5432:5432"
+
+volumes:
+  banco-api-total:
