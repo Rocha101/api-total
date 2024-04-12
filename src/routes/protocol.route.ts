@@ -11,6 +11,11 @@ router.get(
   AuthController.verifyToken,
   protocolController.getProtocolById
 );
+router.get(
+  "/clients/:clientId",
+  AuthController.verifyToken,
+  protocolController.getProtocolByClientId
+);
 router.delete(
   "/:id",
   AuthController.verifyToken,

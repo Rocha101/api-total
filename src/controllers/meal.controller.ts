@@ -45,6 +45,9 @@ const getMealById = async (req: Request, res: Response) => {
       where: {
         id,
       },
+      include: {
+        foods: true,
+      },
     });
     if (!meal) {
       res.status(404).json({ error: "Meal not found" });

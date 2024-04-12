@@ -5,7 +5,10 @@ CREATE TYPE "AccountType" AS ENUM ('COACH', 'CUSTOMER');
 CREATE TYPE "WeekDay" AS ENUM ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY');
 
 -- CreateEnum
-CREATE TYPE "ExerciseType" AS ENUM ('AEROBIC', 'ANAEROBIC');
+CREATE TYPE "ExerciseType" AS ENUM ('CARDIO', 'STRETCHING', 'STRENGHT');
+
+-- CreateEnum
+CREATE TYPE "SetType" AS ENUM ('WARM_UP', 'WORKING', 'FEEDER', 'TOP', 'BACK_OFF');
 
 -- CreateEnum
 CREATE TYPE "MuscleGroup" AS ENUM ('CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'FOREARMS', 'CALVES', 'ABS', 'QUADS', 'HAMSTRINGS', 'GLUTES', 'ADDUCTORS', 'ABDUCTORS', 'TRAPS', 'LATS', 'LOWER_BACK', 'OBLIQUES', 'NECK');
@@ -20,7 +23,10 @@ CREATE TYPE "MealType" AS ENUM ('BREAKFAST', 'MORNING_SNACK', 'LUNCH', 'AFTERNOO
 CREATE TYPE "HormoneType" AS ENUM ('NINETEEN_NOR', 'DHT', 'TESTOSTERONE', 'PEPTIDE', 'INSULIN', 'TIREOID');
 
 -- CreateEnum
-CREATE TYPE "HormoneUnit" AS ENUM ('MG', 'ML', 'UI');
+CREATE TYPE "HormoneUnit" AS ENUM ('MG', 'ML', 'UI', 'UNIT');
+
+-- CreateEnum
+CREATE TYPE "ConcentrationUnit" AS ENUM ('MG_ML', 'MG');
 
 -- CreateTable
 CREATE TABLE "Account" (
@@ -41,8 +47,8 @@ CREATE TABLE "Train" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "weekDay" "WeekDay",
-    "protocolId" TEXT NOT NULL,
+    "weekDay" "WeekDay"[],
+    "protocolId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "accountId" TEXT NOT NULL,
@@ -55,6 +61,7 @@ CREATE TABLE "Reps" (
     "id" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
     "weight" DOUBLE PRECISION NOT NULL,
+    "setType" "SetType",
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "setsId" TEXT NOT NULL,
@@ -78,7 +85,7 @@ CREATE TABLE "Exercise" (
     "name" TEXT NOT NULL,
     "description" TEXT,
     "totalTime" INTEGER NOT NULL,
-    "type" "ExerciseType" DEFAULT 'ANAEROBIC',
+    "type" "ExerciseType" DEFAULT 'STRENGHT',
     "muscleGroup" "MuscleGroup",
     "equipment" TEXT,
     "difficulty" INTEGER NOT NULL DEFAULT 1,
@@ -149,25 +156,14 @@ CREATE TABLE "Hormone" (
     "quantity" DOUBLE PRECISION NOT NULL,
     "concentration" DOUBLE PRECISION NOT NULL,
     "unit" "HormoneUnit" NOT NULL,
+    "concentrationUnit" "ConcentrationUnit",
     "hormoneType" "HormoneType" NOT NULL,
-    "hormonalProtocolId" TEXT NOT NULL,
+    "hormonalProtocolId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "accountId" TEXT NOT NULL,
+    "accountId" TEXT,
 
     CONSTRAINT "Hormone_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "HormonalProtocol" (
-    "id" TEXT NOT NULL,
-    "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "protocolId" TEXT NOT NULL,
-    "accountId" TEXT NOT NULL,
-
-    CONSTRAINT "HormonalProtocol_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -178,12 +174,26 @@ CREATE TABLE "ExtraCompounds" (
     "quantity" DOUBLE PRECISION NOT NULL,
     "concentration" DOUBLE PRECISION NOT NULL,
     "unit" "HormoneUnit" NOT NULL,
+    "concentrationUnit" "ConcentrationUnit",
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "protocolId" TEXT NOT NULL,
-    "accountId" TEXT NOT NULL,
+    "protocolId" TEXT,
+    "accountId" TEXT,
 
     CONSTRAINT "ExtraCompounds_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "HormonalProtocol" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "protocolId" TEXT,
+    "accountId" TEXT,
+
+    CONSTRAINT "HormonalProtocol_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -191,7 +201,8 @@ CREATE TABLE "Protocol" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "accountId" TEXT NOT NULL,
+    "accountId" TEXT,
+    "clientId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -205,7 +216,7 @@ CREATE UNIQUE INDEX "Account_email_key" ON "Account"("email");
 ALTER TABLE "Account" ADD CONSTRAINT "Account_coachId_fkey" FOREIGN KEY ("coachId") REFERENCES "Account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Train" ADD CONSTRAINT "Train_protocolId_fkey" FOREIGN KEY ("protocolId") REFERENCES "Protocol"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Train" ADD CONSTRAINT "Train_protocolId_fkey" FOREIGN KEY ("protocolId") REFERENCES "Protocol"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Train" ADD CONSTRAINT "Train_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -241,22 +252,22 @@ ALTER TABLE "Food" ADD CONSTRAINT "Food_mealId_fkey" FOREIGN KEY ("mealId") REFE
 ALTER TABLE "Food" ADD CONSTRAINT "Food_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Hormone" ADD CONSTRAINT "Hormone_hormonalProtocolId_fkey" FOREIGN KEY ("hormonalProtocolId") REFERENCES "HormonalProtocol"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Hormone" ADD CONSTRAINT "Hormone_hormonalProtocolId_fkey" FOREIGN KEY ("hormonalProtocolId") REFERENCES "HormonalProtocol"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Hormone" ADD CONSTRAINT "Hormone_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Hormone" ADD CONSTRAINT "Hormone_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "HormonalProtocol" ADD CONSTRAINT "HormonalProtocol_protocolId_fkey" FOREIGN KEY ("protocolId") REFERENCES "Protocol"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ExtraCompounds" ADD CONSTRAINT "ExtraCompounds_protocolId_fkey" FOREIGN KEY ("protocolId") REFERENCES "Protocol"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "HormonalProtocol" ADD CONSTRAINT "HormonalProtocol_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ExtraCompounds" ADD CONSTRAINT "ExtraCompounds_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ExtraCompounds" ADD CONSTRAINT "ExtraCompounds_protocolId_fkey" FOREIGN KEY ("protocolId") REFERENCES "Protocol"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "HormonalProtocol" ADD CONSTRAINT "HormonalProtocol_protocolId_fkey" FOREIGN KEY ("protocolId") REFERENCES "Protocol"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ExtraCompounds" ADD CONSTRAINT "ExtraCompounds_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "HormonalProtocol" ADD CONSTRAINT "HormonalProtocol_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Protocol" ADD CONSTRAINT "Protocol_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Protocol" ADD CONSTRAINT "Protocol_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE SET NULL ON UPDATE CASCADE;

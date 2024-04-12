@@ -100,19 +100,21 @@ const createExercise = async (req: Request, res: Response) => {
         difficulty: exerciseData.difficulty,
         imageUrl: exerciseData.imageUrl,
         account: { connect: { id: exerciseData.accountId } },
-        sets: {
+        sets: { create: [] },
+      },
+    });
+
+    const sets = await prisma.sets.create({
+      data: {
+        exercise: { connect: { id: exercise.id } },
+        reps: {
           create: exerciseData.sets.map((set: any) => ({
-            reps: {
-              create: {
-                quantity: set.quantity,
-                weight: set.weight,
-                setType: set.setType,
-              },
-            },
+            quantity: set.quantity,
+            weight: set.weight,
+            setType: set.setType,
           })),
         },
       },
-      include: { sets: { include: { reps: true } } },
     });
 
     res.json(exercise);

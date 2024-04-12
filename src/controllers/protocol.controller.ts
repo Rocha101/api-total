@@ -9,7 +9,12 @@ const prisma = new PrismaClient();
 const protocolSchema = object({
   name: string(),
   description: string().optional(),
-  accountId: string(),
+  accountId: string().optional(),
+  clientId: string().optional(),
+  diet: string(),
+  train: string(),
+  hormonalProtocol: string(),
+  extraCompound: string().optional(),
 });
 
 // GET /protocols
@@ -20,6 +25,7 @@ const getAllProtocols = async (req: Request, res: Response) => {
         diets: true,
         trains: true,
         hormonalProtocols: true,
+        extraCompounds: true,
       },
     });
     res.json(protocols);
@@ -40,6 +46,31 @@ const getProtocolById = async (req: Request, res: Response) => {
         diets: true,
         trains: true,
         hormonalProtocols: true,
+        extraCompounds: true,
+      },
+    });
+    if (!protocol) {
+      res.status(404).json({ error: "Protocol not found" });
+    } else {
+      res.json(protocol);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getProtocolByClientId = async (req: Request, res: Response) => {
+  const { clientId } = req.params;
+  try {
+    const protocol = await prisma.protocol.findMany({
+      where: {
+        clientId: clientId,
+      },
+      include: {
+        diets: true,
+        trains: true,
+        hormonalProtocols: true,
+        extraCompounds: true,
       },
     });
     if (!protocol) {
@@ -56,13 +87,47 @@ const getProtocolById = async (req: Request, res: Response) => {
 const createProtocol = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
+    const body = { ...req.body };
     const validatedData = protocolSchema.parse(body);
     const protocol = await prisma.protocol.create({
-      data: validatedData,
+      data: {
+        name: validatedData.name,
+        description: validatedData.description,
+        accountId,
+        clientId: validatedData.clientId,
+        ...(validatedData.extraCompound && {
+          extraCompounds: {
+            connect: {
+              id: validatedData.extraCompound,
+            },
+          },
+        }),
+        ...(validatedData.diet && {
+          diets: {
+            connect: {
+              id: validatedData.diet,
+            },
+          },
+        }),
+        ...(validatedData.train && {
+          trains: {
+            connect: {
+              id: validatedData.train,
+            },
+          },
+        }),
+        ...(validatedData.hormonalProtocol && {
+          hormonalProtocols: {
+            connect: {
+              id: validatedData.hormonalProtocol,
+            },
+          },
+        }),
+      },
     });
     res.status(201).json(protocol);
   } catch (error) {
+    console.log(error);
     if (error instanceof Error && error.name === "ZodError") {
       res.status(400).json({ error: "Invalid request body" });
     } else {
@@ -82,7 +147,40 @@ const updateProtocol = async (req: Request, res: Response) => {
       where: {
         id,
       },
-      data: validatedData,
+      data: {
+        name: validatedData.name,
+        description: validatedData.description,
+        accountId,
+        clientId: validatedData.clientId,
+        ...(validatedData.extraCompound && {
+          extraCompounds: {
+            connect: {
+              id: validatedData.extraCompound,
+            },
+          },
+        }),
+        ...(validatedData.diet && {
+          diets: {
+            connect: {
+              id: validatedData.diet,
+            },
+          },
+        }),
+        ...(validatedData.train && {
+          trains: {
+            connect: {
+              id: validatedData.train,
+            },
+          },
+        }),
+        ...(validatedData.hormonalProtocol && {
+          hormonalProtocols: {
+            connect: {
+              id: validatedData.hormonalProtocol,
+            },
+          },
+        }),
+      },
     });
     res.json(updatedProtocol);
   } catch (error) {
@@ -115,4 +213,5 @@ export default {
   createProtocol,
   updateProtocol,
   deleteProtocol,
+  getProtocolByClientId,
 };

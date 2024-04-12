@@ -7,6 +7,11 @@ const router = express.Router();
 
 router.get("/", AuthController.verifyToken, accountController.getAccount);
 router.get(
+  "/clients",
+  AuthController.verifyToken,
+  accountController.getClientsByCoachId
+);
+router.get(
   "/:id",
   AuthController.verifyToken,
   accountController.getAccountById

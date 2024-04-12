@@ -11,7 +11,7 @@ const trainSchema = object({
   name: string(),
   description: string().optional(),
   exercises: string().array(),
-  weekDay: nativeEnum(WeekDay).optional(),
+  weekDays: nativeEnum(WeekDay).array().optional(),
   accountId: string(),
   protocolId: string().optional(),
 });
@@ -25,7 +25,15 @@ const getAllTrains = async (req: Request, res: Response) => {
         accountId,
       },
       include: {
-        exercises: true,
+        exercises: {
+          include: {
+            sets: {
+              include: {
+                reps: true,
+              },
+            },
+          },
+        },
       },
     });
     res.json(trains);
@@ -43,9 +51,48 @@ const getTrainById = async (req: Request, res: Response) => {
         id,
       },
       include: {
-        exercises: true,
+        exercises: {
+          include: {
+            sets: {
+              include: {
+                reps: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    if (!train) {
+      res.status(404).json({ error: "Train not found" });
+    } else {
+      res.json(train);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getTrainByProtocolId = async (req: Request, res: Response) => {
+  const { protocolId } = req.params;
+  try {
+    const train = await prisma.train.findMany({
+      where: {
+        protocolId,
+      },
+      include: {
+        exercises: {
+          include: {
+            sets: {
+              include: {
+                reps: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
     if (!train) {
       res.status(404).json({ error: "Train not found" });
     } else {
@@ -133,4 +180,5 @@ export default {
   createTrain,
   updateTrain,
   deleteTrain,
+  getTrainByProtocolId,
 };

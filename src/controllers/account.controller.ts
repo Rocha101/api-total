@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import prisma from "../models/prisma";
+import { getAccountId } from "../utils/getAccountId";
+import { object, string } from "zod";
 
 const getAccount = async (req: Request, res: Response) => {
   try {
@@ -16,6 +18,21 @@ const getAccountById = async (req: Request, res: Response) => {
     const account = await prisma.account.findUnique({
       where: {
         id,
+      },
+    });
+    res.status(200).json(account);
+  } catch (e) {
+    res.status(500).json({ error: e });
+  }
+};
+
+const getClientsByCoachId = async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req, res);
+
+    const account = await prisma.account.findMany({
+      where: {
+        coachId: accountId,
       },
     });
     res.status(200).json(account);
@@ -62,4 +79,5 @@ export default {
   getAccountById,
   updateAccount,
   deleteAccount,
+  getClientsByCoachId,
 };

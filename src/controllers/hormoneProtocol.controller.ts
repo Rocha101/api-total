@@ -37,6 +37,9 @@ const getHormonalProtocolById = async (req: Request, res: Response) => {
       where: {
         id,
       },
+      include: {
+        hormones: true,
+      },
     });
     if (!hormonalProtocol) {
       res.status(404).json({ error: "Hormonal protocol not found" });

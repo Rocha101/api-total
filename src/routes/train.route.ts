@@ -7,6 +7,11 @@ const router = express.Router();
 
 router.get("/", AuthController.verifyToken, trainController.getAllTrains);
 router.get("/:id", AuthController.verifyToken, trainController.getTrainById);
+router.get(
+  "/protocol/:id",
+  AuthController.verifyToken,
+  trainController.getTrainByProtocolId
+);
 router.delete("/:id", AuthController.verifyToken, trainController.deleteTrain);
 router.put("/:id", AuthController.verifyToken, trainController.updateTrain);
 router.post("/", AuthController.verifyToken, trainController.createTrain);
