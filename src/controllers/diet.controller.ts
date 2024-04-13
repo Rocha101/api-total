@@ -43,7 +43,11 @@ const getDietById = async (req: Request, res: Response) => {
         id,
       },
       include: {
-        meals: true,
+        meals: {
+          include: {
+            foods: true,
+          },
+        },
       },
     });
     if (!diet) {
