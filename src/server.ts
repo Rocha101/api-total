@@ -16,7 +16,7 @@ import qs from "qs";
 export const prisma = new PrismaClient();
 
 const app = express();
-const port = 8088;
+const port = process.env.PORT || 3000;
 var cors = require("cors");
 
 async function main() {
@@ -39,7 +39,7 @@ async function main() {
     res.status(404).json({ error: `Route ${req.originalUrl} not found` });
   });
 
-  app.listen(port, () => {
+  app.listen(port, "0.0.0.0", () => {
     console.log(`Server is listening on port ${port}`);
   });
 }
