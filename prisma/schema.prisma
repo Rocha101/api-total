@@ -118,12 +118,9 @@ model Exercise {
   name        String
   description String?
   sets        Sets[]
-  totalTime   Int
   type        ExerciseType? @default(STRENGHT)
   muscleGroup MuscleGroup?
   equipment   String?
-  difficulty  Int           @default(1)
-  imageUrl    String?
   train       Train?        @relation(fields: [trainId], references: [id])
   trainId     String?
   createdAt   DateTime      @default(now())
@@ -216,7 +213,7 @@ model Hormone {
   name               String
   description        String?
   quantity           Float
-  concentration      Float
+  concentration      Float?
   unit               HormoneUnit
   concentrationUnit  ConcentrationUnit?
   hormoneType        HormoneType
@@ -233,7 +230,7 @@ model ExtraCompounds {
   name              String
   description       String?
   quantity          Float
-  concentration     Float
+  concentration     Float?
   unit              HormoneUnit
   concentrationUnit ConcentrationUnit?
   createdAt         DateTime           @default(now())

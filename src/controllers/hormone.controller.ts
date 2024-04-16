@@ -11,7 +11,7 @@ const hormoneSchema = object({
   description: string().optional(),
   quantity: number(),
   unit: enumValidator(["MG", "ML", "UI", "UNIT"]),
-  concentration: number(),
+  concentration: number().optional(),
   concentrationUnit: enumValidator(["MG_ML", "MG"]).optional(),
   hormoneType: enumValidator([
     "NINETEEN_NOR",

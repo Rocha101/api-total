@@ -11,9 +11,9 @@ const protocolSchema = object({
   description: string().optional(),
   accountId: string().optional(),
   clientId: string().optional(),
-  diet: string(),
-  train: string(),
-  hormonalProtocol: string(),
+  diet: string().optional(),
+  train: string().array().optional(),
+  hormonalProtocol: string().optional(),
   extraCompound: string().optional(),
 });
 
@@ -76,7 +76,7 @@ const getProtocolByClientId = async (req: Request, res: Response) => {
     if (!protocol) {
       res.status(404).json({ error: "Protocol not found" });
     } else {
-      res.json(protocol);
+      res.json(protocol[0]);
     }
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
@@ -111,9 +111,9 @@ const createProtocol = async (req: Request, res: Response) => {
         }),
         ...(validatedData.train && {
           trains: {
-            connect: {
-              id: validatedData.train,
-            },
+            connect: validatedData.train.map((trainId: string) => ({
+              id: trainId,
+            })),
           },
         }),
         ...(validatedData.hormonalProtocol && {
@@ -168,9 +168,9 @@ const updateProtocol = async (req: Request, res: Response) => {
         }),
         ...(validatedData.train && {
           trains: {
-            connect: {
-              id: validatedData.train,
-            },
+            connect: validatedData.train.map((mealId: string) => ({
+              id: mealId,
+            })),
           },
         }),
         ...(validatedData.hormonalProtocol && {

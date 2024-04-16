@@ -1,7 +1,6 @@
 import express from "express";
 import AuthController from "../controllers/auth.controller";
 import hormoneProtocolController from "../controllers/hormoneProtocol.controller";
-import paginate from "../middlewares/pagination";
 
 const router = express.Router();
 
@@ -14,6 +13,11 @@ router.get(
   "/:id",
   AuthController.verifyToken,
   hormoneProtocolController.getHormonalProtocolById
+);
+router.get(
+  "/protocol/:protocolId",
+  AuthController.verifyToken,
+  hormoneProtocolController.getHormonalProtocolByProtocolId
 );
 router.delete(
   "/:id",

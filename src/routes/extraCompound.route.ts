@@ -15,6 +15,11 @@ router.get(
   AuthController.verifyToken,
   extraCompoundController.getExtraCompoundById
 );
+router.get(
+  "/protocol/:protocolId",
+  AuthController.verifyToken,
+  extraCompoundController.getExtraCompoundByProtocolId
+);
 router.delete(
   "/:id",
   AuthController.verifyToken,

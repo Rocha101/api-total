@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
+import { get } from "lodash";
 
 const prisma = new PrismaClient();
 
@@ -21,6 +22,9 @@ const getAllHormonalProtocols = async (req: Request, res: Response) => {
     const hormonalProtocols = await prisma.hormonalProtocol.findMany({
       where: {
         accountId,
+      },
+      include: {
+        hormones: true,
       },
     });
     res.json(hormonalProtocols);
@@ -46,6 +50,23 @@ const getHormonalProtocolById = async (req: Request, res: Response) => {
     } else {
       res.json(hormonalProtocol);
     }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getHormonalProtocolByProtocolId = async (req: Request, res: Response) => {
+  const { protocolId } = req.params;
+  try {
+    const hormonalProtocols = await prisma.hormonalProtocol.findMany({
+      where: {
+        protocolId,
+      },
+      include: {
+        hormones: true,
+      },
+    });
+    res.json(hormonalProtocols);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -124,4 +145,5 @@ export default {
   createHormonalProtocol,
   updateHormonalProtocol,
   deleteHormonalProtocol,
+  getHormonalProtocolByProtocolId,
 };

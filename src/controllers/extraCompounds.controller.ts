@@ -10,7 +10,7 @@ const extraCompoundSchema = object({
   name: string(),
   description: string().optional(),
   quantity: number(),
-  concentration: number(),
+  concentration: number().optional(),
   concentrationUnit: enumValidator(["MG_ML", "MG"]).optional(),
   unit: enumValidator(["MG", "ML", "UI"]),
   protocolId: string().optional(),
@@ -45,6 +45,24 @@ const getExtraCompoundById = async (req: Request, res: Response) => {
       res.status(404).json({ error: "Extra compound not found" });
     } else {
       res.json(extraCompound);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getExtraCompoundByProtocolId = async (req: Request, res: Response) => {
+  const { protocolId } = req.params;
+  try {
+    const extraCompounds = await prisma.extraCompounds.findMany({
+      where: {
+        protocolId,
+      },
+    });
+    if (!extraCompounds) {
+      res.status(404).json({ error: "Extra compound not found" });
+    } else {
+      res.json(extraCompounds);
     }
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
@@ -114,4 +132,5 @@ export default {
   createExtraCompound,
   updateExtraCompound,
   deleteExtraCompound,
+  getExtraCompoundByProtocolId,
 };

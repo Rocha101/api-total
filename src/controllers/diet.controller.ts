@@ -60,6 +60,31 @@ const getDietById = async (req: Request, res: Response) => {
   }
 };
 
+const getDietByProtocolId = async (req: Request, res: Response) => {
+  const { protocolId } = req.params;
+  try {
+    const diets = await prisma.diet.findMany({
+      where: {
+        protocolId,
+      },
+      include: {
+        meals: {
+          include: {
+            foods: true,
+          },
+        },
+      },
+    });
+    if (!diets) {
+      res.status(404).json({ error: "Diet not found" });
+    } else {
+      res.json(diets);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 // POST /diets
 const createDiet = async (req: Request, res: Response) => {
   try {
@@ -134,4 +159,11 @@ const deleteDiet = async (req: Request, res: Response) => {
   }
 };
 
-export default { getAllDiets, getDietById, createDiet, updateDiet, deleteDiet };
+export default {
+  getAllDiets,
+  getDietById,
+  createDiet,
+  updateDiet,
+  deleteDiet,
+  getDietByProtocolId,
+};

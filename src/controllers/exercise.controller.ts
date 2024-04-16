@@ -13,12 +13,9 @@ const prisma = new PrismaClient();
 const exerciseSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  totalTime: z.number().int(),
   type: z.nativeEnum(ExerciseType).optional(),
   muscleGroup: z.nativeEnum(MuscleGroup).optional(),
   equipment: z.string().optional(),
-  difficulty: z.number().int().min(1).max(10).default(1),
-  imageUrl: z.string().optional(),
   accountId: z.string(),
   sets: z.array(
     z.object({
@@ -93,29 +90,32 @@ const createExercise = async (req: Request, res: Response) => {
       data: {
         name: exerciseData.name,
         description: exerciseData.description,
-        totalTime: exerciseData.totalTime,
         type: exerciseData.type as any,
         muscleGroup: exerciseData.muscleGroup as any,
         equipment: exerciseData.equipment,
-        difficulty: exerciseData.difficulty,
-        imageUrl: exerciseData.imageUrl,
         account: { connect: { id: exerciseData.accountId } },
-        sets: { create: [] },
-      },
-    });
-
-    const sets = await prisma.sets.create({
-      data: {
-        exercise: { connect: { id: exercise.id } },
-        reps: {
+        sets: {
           create: exerciseData.sets.map((set: any) => ({
-            quantity: set.quantity,
-            weight: set.weight,
-            setType: set.setType,
+            reps: {
+              create: set,
+            },
           })),
         },
       },
     });
+
+    // const sets = await prisma.sets.create({
+    //   data: {
+    //     exercise: { connect: { id: exercise.id } },
+    //     reps: {
+    //       create: exerciseData.sets.map((set: any) => ({
+    //         quantity: set.quantity,
+    //         weight: set.weight,
+    //         setType: set.setType,
+    //       })),
+    //     },
+    //   },
+    // });
 
     res.json(exercise);
   } catch (error) {
@@ -146,12 +146,9 @@ const updateExercise = async (req: Request, res: Response) => {
       data: {
         name: exerciseData.name,
         description: exerciseData.description,
-        totalTime: exerciseData.totalTime,
         type: exerciseData.type as any,
         muscleGroup: exerciseData.muscleGroup as any,
         equipment: exerciseData.equipment,
-        difficulty: exerciseData.difficulty,
-        imageUrl: exerciseData.imageUrl,
         account: { connect: { id: exerciseData.accountId } },
         sets: {
           create: exerciseData.sets.map((set: any) => ({
