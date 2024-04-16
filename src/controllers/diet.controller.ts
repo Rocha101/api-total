@@ -121,6 +121,25 @@ const updateDiet = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const body = { ...req.body, accountId };
     const validatedData = dietSchema.parse(body);
+
+    const existingDiet = await prisma.diet.findUnique({
+      where: { id },
+      include: { meals: true }, // Include associated meals
+    });
+
+    if (!existingDiet) {
+      res.status(404).json({ error: "Diet not found" });
+      return;
+    }
+
+    // Extract mealIds from existing diet
+    const existingMealIds = existingDiet.meals.map((meal) => meal.id);
+
+    // Find meals to disconnect
+    const mealsToDisconnect = existingMealIds.filter(
+      (mealId) => !validatedData.meals.includes(mealId)
+    );
+
     const updatedDiet = await prisma.diet.update({
       where: {
         id,
@@ -128,6 +147,9 @@ const updateDiet = async (req: Request, res: Response) => {
       data: {
         ...validatedData,
         meals: {
+          disconnect: mealsToDisconnect.map((mealId: string) => ({
+            id: mealId,
+          })),
           connect: validatedData.meals.map((mealId: string) => ({
             id: mealId,
           })),

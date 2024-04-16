@@ -65,6 +65,7 @@ const createMeal = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const body = { ...req.body, accountId };
     const validatedData = mealSchema.parse(body);
+
     const meal = await prisma.meal.create({
       data: {
         ...validatedData,
