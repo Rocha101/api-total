@@ -10,7 +10,7 @@ export const createCheckoutController = async (
   const accountId = await getAccountId(request, response);
 
   if (!accountId) {
-    return response.status(403).send({
+    return response.status(403).json({
       error: "Not authorized",
     });
   }
@@ -22,7 +22,7 @@ export const createCheckoutController = async (
   });
 
   if (!user) {
-    return response.status(403).send({
+    return response.status(403).json({
       error: "Not authorized",
     });
   }
