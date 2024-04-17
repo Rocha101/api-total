@@ -43,7 +43,7 @@ async function main() {
   app.use("/extraCompound", extraCompoundRoute);
   app.use("/exercise", exerciseRoute);
   app.use("/food", foodRoute);
-  app.get("/checkout", checkoutRoute);
+  app.use("/checkout", checkoutRoute);
 
   app.all("*", (req: Request, res: Response) => {
     res.status(404).json({ error: `Route ${req.originalUrl} not found` });
