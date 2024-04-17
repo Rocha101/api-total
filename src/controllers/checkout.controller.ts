@@ -1,12 +1,13 @@
 import type { Request, Response } from "express";
 import prisma from "../models/prisma";
 import { createCheckoutSession } from "../lib/stripe";
+import { getAccountId } from "../utils/getAccountId";
 
 export const createCheckoutController = async (
   request: Request,
   response: Response
 ) => {
-  const accountId = request.headers["x-user-id"];
+  const accountId = await getAccountId(request, response);
 
   if (!accountId) {
     return response.status(403).send({
