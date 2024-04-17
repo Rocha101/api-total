@@ -1,7 +1,15 @@
 import { Request, Response } from "express";
 import prisma from "../models/prisma";
 import { getAccountId } from "../utils/getAccountId";
-import { object, string } from "zod";
+import { nativeEnum, object, string } from "zod";
+
+const accountSchema = object({
+  name: string(),
+  email: string().email(),
+  password: string(),
+  accountType: nativeEnum(AccountType),
+  activationKey: string().optional(),
+});
 
 const getAccount = async (req: Request, res: Response) => {
   try {
@@ -43,14 +51,50 @@ const getClientsByCoachId = async (req: Request, res: Response) => {
 
 const updateAccount = async (req: Request, res: Response) => {
   try {
-    const { id, name, email } = req.body;
+    const { id } = req.params;
+    const validatedData = accountSchema.parse(req.body);
+
+    if (validatedData.activationKey) {
+      const currentSubscription = await prisma.account.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          subscriptions: true,
+        },
+      });
+
+      if (currentSubscription?.subscriptions.length) {
+        await prisma.account.update({
+          where: {
+            id,
+          },
+          data: {
+            subscriptions: {
+              disconnect: {
+                id: currentSubscription.subscriptions[0].id,
+              },
+            },
+          },
+        });
+      }
+    }
+
     const updatedAccount = await prisma.account.update({
       where: {
         id,
       },
       data: {
-        name,
-        email,
+        name: validatedData.name,
+        email: validatedData.email,
+        password: validatedData.password,
+        ...(validatedData.activationKey && {
+          subscriptions: {
+            connect: {
+              id: validatedData.activationKey,
+            },
+          },
+        }),
       },
     });
 

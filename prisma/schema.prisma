@@ -31,11 +31,32 @@ model Account {
   coach             Account?           @relation("CoachAccount", fields: [coachId], references: [id])
   coachId           String?
   clients           Account[]          @relation("CoachAccount")
-  Food              Food[]
+  foods             Food[]
+  subscriptions     Subscription[]
+  plans             Plan[]
+}
 
-  stripeCustomerId         String?
-  stripeSubscriptionId     String?
-  stripeSubscriptionStatus String?
+model Subscription {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  account   Account? @relation(fields: [accountId], references: [id])
+  accountId String?
+  plan      Plan     @relation(fields: [planId], references: [id])
+  planId    String
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  duration      Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  account       Account?       @relation(fields: [accountId], references: [id])
+  accountId     String?
+  subscriptions Subscription[]
 }
 
 enum WeekDay {

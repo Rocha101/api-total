@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import prisma from "../models/prisma";
-import { nativeEnum, object, string } from "zod";
+import { IssueData, nativeEnum, object, string } from "zod";
 import { AccountType } from "@prisma/client";
 
 const registerSchema = object({
@@ -10,6 +10,23 @@ const registerSchema = object({
   password: string(),
   accountType: nativeEnum(AccountType),
   coachId: string().optional(),
+  activationKey: string().optional(),
+}).superRefine((data, refinementContext) => {
+  if (data.accountType === "COACH" && !data.activationKey) {
+    return refinementContext.addIssue({
+      path: ["activationKey"],
+      message: "Chave de ativação obrigatória",
+      code: "invalid_literal",
+    } as IssueData);
+  }
+  if (data.accountType === "CUSTOMER" && !data.coachId) {
+    return refinementContext.addIssue({
+      path: ["coachId"],
+      message: "Código do coach obrigatório",
+      code: "invalid_literal",
+    } as IssueData);
+  }
+  return true;
 });
 
 const loginSchema = object({
@@ -35,7 +52,20 @@ const registerUser = async (req: Request, res: Response) => {
     }
 
     const newAccount = await prisma.account.create({
-      data: validatedData,
+      data: {
+        name: validatedData.name,
+        email: validatedData.email,
+        password: validatedData.password,
+        accountType: validatedData.accountType,
+        ...(validatedData.coachId && { coachId: validatedData.coachId }),
+        ...(validatedData.activationKey && {
+          subscriptions: {
+            connect: {
+              id: validatedData.activationKey,
+            },
+          },
+        }),
+      },
     });
 
     console.log(newAccount);
