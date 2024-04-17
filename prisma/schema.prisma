@@ -32,6 +32,10 @@ model Account {
   coachId           String?
   clients           Account[]          @relation("CoachAccount")
   Food              Food[]
+
+  stripeCustomerId         String?
+  stripeSubscriptionId     String?
+  stripeSubscriptionStatus String?
 }
 
 enum WeekDay {

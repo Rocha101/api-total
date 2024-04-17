@@ -12,6 +12,8 @@ import extraCompoundRoute from "./routes/extraCompound.route";
 import exerciseRoute from "./routes/exercise.route";
 import foodRoute from "./routes/food.route";
 import qs from "qs";
+import { stripeWebhookController } from "./controllers/stripe.controller";
+import { createCheckoutController } from "./controllers/checkout.controller";
 
 export const prisma = new PrismaClient();
 
@@ -21,6 +23,12 @@ var cors = require("cors");
 
 async function main() {
   app.use(cors());
+
+  app.post(
+    "/stripe",
+    express.raw({ type: "application/json" }),
+    stripeWebhookController
+  );
   app.use(express.json());
   app.set("query parser", (str: string) => qs.parse(str, { arrayLimit: 1000 }));
   app.use("/account", accountRoute);
@@ -34,6 +42,7 @@ async function main() {
   app.use("/extraCompound", extraCompoundRoute);
   app.use("/exercise", exerciseRoute);
   app.use("/food", foodRoute);
+  app.post("/checkout", createCheckoutController);
 
   app.all("*", (req: Request, res: Response) => {
     res.status(404).json({ error: `Route ${req.originalUrl} not found` });
