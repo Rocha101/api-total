@@ -11,6 +11,7 @@ import protocolRoute from "./routes/protocol.route";
 import extraCompoundRoute from "./routes/extraCompound.route";
 import exerciseRoute from "./routes/exercise.route";
 import foodRoute from "./routes/food.route";
+import checkoutRoute from "./routes/checkout.route";
 import qs from "qs";
 import { stripeWebhookController } from "./controllers/stripe.controller";
 import { createCheckoutController } from "./controllers/checkout.controller";
@@ -42,7 +43,7 @@ async function main() {
   app.use("/extraCompound", extraCompoundRoute);
   app.use("/exercise", exerciseRoute);
   app.use("/food", foodRoute);
-  app.get("/checkout", createCheckoutController);
+  app.get("/checkout", checkoutRoute);
 
   app.all("*", (req: Request, res: Response) => {
     res.status(404).json({ error: `Route ${req.originalUrl} not found` });
