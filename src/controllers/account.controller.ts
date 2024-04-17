@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import prisma from "../models/prisma";
 import { getAccountId } from "../utils/getAccountId";
 import { nativeEnum, object, string } from "zod";
+import { AccountType } from "@prisma/client";
 
 const accountSchema = object({
   name: string(),
