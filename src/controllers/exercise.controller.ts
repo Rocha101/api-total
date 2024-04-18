@@ -190,7 +190,6 @@ const deleteExercise = async (req: Request, res: Response) => {
     });
     res.status(204).send();
   } catch (error) {
-    console.log(error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

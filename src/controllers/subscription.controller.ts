@@ -1,85 +1,86 @@
-import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
 import { getAccountId } from "../utils/getAccountId";
 import { number, object, string } from "zod";
-
-const prisma = new PrismaClient();
+import prisma from "../models/prisma";
 
 const subscriptionSchema = object({
   planId: string(),
 });
 
-const planSchema = object({
-  name: string(),
-  price: number(),
-  duration: number(),
+const subscriptionIdSchema = object({
+  activationId: string(),
 });
-
-const createPlan = async (req: Request, res: Response) => {
-  try {
-    const accountId = await getAccountId(req, res);
-    const validatedData = planSchema.parse(req.body);
-    const plan = await prisma.plan.create({
-      data: {
-        ...validatedData,
-        account: {
-          connect: {
-            id: accountId,
-          },
-        },
-      },
-    });
-    res.json(plan);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to create plan" });
-  }
-};
-
-const getPlanById = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const plan = await prisma.plan.findUnique({
-      where: { id },
-      include: { account: true },
-    });
-    if (!plan) {
-      return res.status(404).json({ error: "Plan not found" });
-    }
-    res.json(plan);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch plan" });
-  }
-};
-
-const getPlans = async (req: Request, res: Response) => {
-  try {
-    const accountId = await getAccountId(req, res);
-    const plans = await prisma.plan.findMany({
-      where: {
-        accountId,
-      },
-    });
-    res.json(plans);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch plans" });
-  }
-};
 
 const createSubscription = async (req: Request, res: Response) => {
   try {
     const validatedData = subscriptionSchema.parse(req.body);
     const subscription = await prisma.subscription.create({
-      data: validatedData,
+      data: {
+        plan: {
+          connect: {
+            id: validatedData.planId,
+          },
+        },
+      },
+      include: { plan: true },
     });
-    res.json(subscription);
+
+    if (subscription.plan) {
+      const subscriptionWithExpireDate = await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          expiresAt: new Date(
+            subscription.createdAt.setMonth(
+              subscription.createdAt.getMonth() + subscription.plan.duration
+            )
+          ),
+        },
+      });
+
+      res.status(200).json(subscriptionWithExpireDate);
+    }
+
+    return res.status(404).json({ error: "Plan not found" });
   } catch (error) {
     res.status(500).json({ error: "Failed to create subscription" });
   }
 };
 
+const getSubscriptions = async (req: Request, res: Response) => {
+  try {
+    const subscriptions = await prisma.subscription.findMany({
+      include: { plan: true, account: true },
+    });
+
+    const now = new Date();
+    const validSubscriptions = subscriptions.filter((subscription) => {
+      if (!subscription.plan) return false;
+      const createdAt = new Date(subscription.createdAt);
+      const expiresAt = new Date(createdAt);
+      expiresAt.setMonth(createdAt.getMonth() + subscription.plan.duration);
+      return now < expiresAt;
+    });
+
+    const expiredSubscriptions = subscriptions.filter((subscription) => {
+      if (!subscription.plan) return false;
+      const createdAt = new Date(subscription.createdAt);
+      const expiresAt = new Date(createdAt);
+      expiresAt.setMonth(createdAt.getMonth() + subscription.plan.duration);
+      return now > expiresAt;
+    });
+
+    res.status(200).json({
+      validSubscriptions,
+      expiredSubscriptions,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch subscriptions" });
+  }
+};
+
 const verifySubscription = async (req: Request, res: Response) => {
   try {
-    const accountId = await getAccountId(req, res);
+    const { id: accountId } = req.params;
     const subscription = await prisma.subscription.findFirst({
       where: {
         accountId,
@@ -90,6 +91,10 @@ const verifySubscription = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Subscription not found" });
     }
 
+    if (!subscription.plan) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
     const now = new Date();
     const createdAt = new Date(subscription.createdAt);
     const expiresAt = new Date(createdAt);
@@ -98,7 +103,7 @@ const verifySubscription = async (req: Request, res: Response) => {
     if (now > expiresAt) {
       return res.status(403).json({ error: "Subscription expired" });
     }
-    res.json(subscription);
+    res.status(200).json(subscription);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch subscription" });
   }
@@ -114,17 +119,55 @@ const getSubscriptionById = async (req: Request, res: Response) => {
     if (!subscription) {
       return res.status(404).json({ error: "Subscription not found" });
     }
-    res.json(subscription);
+    res.status(200).json(subscription);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch subscription" });
+  }
+};
+
+const changeSubscription = async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req, res);
+    const validatedData = subscriptionIdSchema.parse(req.body);
+    const subscription = await prisma.subscription.deleteMany({
+      where: {
+        accountId,
+      },
+    });
+    const accountWithNewSubscription = await prisma.account.update({
+      where: { id: accountId },
+      data: {
+        subscriptions: {
+          connect: {
+            id: validatedData.activationId,
+          },
+        },
+      },
+      include: { subscriptions: true },
+    });
+    res.status(200).json(accountWithNewSubscription);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update subscription" });
+  }
+};
+
+const deleteSubscription = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const subscription = await prisma.subscription.delete({
+      where: { id },
+    });
+    res.status(200).json(subscription);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete subscription" });
   }
 };
 
 export default {
   createSubscription,
   getSubscriptionById,
-  createPlan,
-  getPlanById,
-  getPlans,
   verifySubscription,
+  getSubscriptions,
+  changeSubscription,
+  deleteSubscription,
 };

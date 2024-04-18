@@ -127,7 +127,6 @@ const createProtocol = async (req: Request, res: Response) => {
     });
     res.status(201).json(protocol);
   } catch (error) {
-    console.log(error);
     if (error instanceof Error && error.name === "ZodError") {
       res.status(400).json({ error: "Invalid request body" });
     } else {

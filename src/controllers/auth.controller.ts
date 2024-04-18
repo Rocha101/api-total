@@ -35,7 +35,6 @@ const loginSchema = object({
 });
 
 const registerUser = async (req: Request, res: Response) => {
-  console.log(req.body);
   try {
     let validatedData = registerSchema.parse(req.body);
     const { email } = validatedData;
@@ -68,8 +67,6 @@ const registerUser = async (req: Request, res: Response) => {
       },
     });
 
-    console.log(newAccount);
-
     const token = jwt.sign({ account: newAccount }, "96172890", {
       expiresIn: 4500, // expires in 45 minutes
     });
@@ -97,7 +94,7 @@ const loginUser = async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign({ account }, "96172890", {
-      expiresIn: 4500, // expires in 45 minutes
+      expiresIn: 60 * 60 * 6, // expires in 6 hours
     });
 
     res.status(200).json({ token, account });
@@ -108,7 +105,6 @@ const loginUser = async (req: Request, res: Response) => {
 
 const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization;
-  console.log(token);
   if (!token) {
     res.status(400).json({ error: "Token não encontrado" });
     return;
@@ -124,7 +120,6 @@ const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
 
 const verify = async (req: Request, res: Response) => {
   const token = req.headers.authorization;
-  console.log(token);
   if (!token) {
     res.status(400).json({ error: "Token não encontrado" });
     return;

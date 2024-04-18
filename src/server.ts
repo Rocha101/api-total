@@ -12,6 +12,7 @@ import extraCompoundRoute from "./routes/extraCompound.route";
 import exerciseRoute from "./routes/exercise.route";
 import foodRoute from "./routes/food.route";
 import subscriptionRoute from "./routes/subscription.route";
+import planRoute from "./routes/plans.route";
 import qs from "qs";
 
 export const prisma = new PrismaClient();
@@ -36,6 +37,7 @@ async function main() {
   app.use("/exercise", exerciseRoute);
   app.use("/food", foodRoute);
   app.use("/subscription", subscriptionRoute);
+  app.use("/plan", planRoute);
 
   app.all("*", (req: Request, res: Response) => {
     res.status(404).json({ error: `Route ${req.originalUrl} not found` });
