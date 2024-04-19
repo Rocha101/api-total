@@ -50,6 +50,21 @@ const getClientsByCoachId = async (req: Request, res: Response) => {
   }
 };
 
+const getClientsCountByCoachId = async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req, res);
+
+    const account = await prisma.account.count({
+      where: {
+        coachId: accountId,
+      },
+    });
+    res.status(200).json(account);
+  } catch (e) {
+    res.status(500).json({ error: e });
+  }
+};
+
 const updateAccount = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -125,4 +140,5 @@ export default {
   updateAccount,
   deleteAccount,
   getClientsByCoachId,
+  getClientsCountByCoachId,
 };

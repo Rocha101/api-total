@@ -14,13 +14,17 @@ const protocolSchema = object({
   diet: string().optional(),
   train: string().array().optional(),
   hormonalProtocol: string().optional(),
-  extraCompound: string().optional(),
+  extraCompound: string().array().optional(),
 });
 
 // GET /protocols
 const getAllProtocols = async (req: Request, res: Response) => {
   try {
+    const accountId = await getAccountId(req, res);
     const protocols = await prisma.protocol.findMany({
+      where: {
+        accountId,
+      },
       include: {
         diets: true,
         trains: true,
@@ -29,6 +33,20 @@ const getAllProtocols = async (req: Request, res: Response) => {
       },
     });
     res.json(protocols);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getProtocolsCount = async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req, res);
+    const count = await prisma.protocol.count({
+      where: {
+        accountId,
+      },
+    });
+    res.json(count);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -95,13 +113,6 @@ const createProtocol = async (req: Request, res: Response) => {
         description: validatedData.description,
         accountId,
         clientId: validatedData.clientId,
-        ...(validatedData.extraCompound && {
-          extraCompounds: {
-            connect: {
-              id: validatedData.extraCompound,
-            },
-          },
-        }),
         ...(validatedData.diet && {
           diets: {
             connect: {
@@ -111,8 +122,15 @@ const createProtocol = async (req: Request, res: Response) => {
         }),
         ...(validatedData.train && {
           trains: {
-            connect: validatedData.train.map((trainId: string) => ({
-              id: trainId,
+            connect: validatedData.train.map((id: string) => ({
+              id: id,
+            })),
+          },
+        }),
+        ...(validatedData.extraCompound && {
+          extraCompounds: {
+            connect: validatedData.extraCompound.map((id: string) => ({
+              id: id,
             })),
           },
         }),
@@ -151,13 +169,6 @@ const updateProtocol = async (req: Request, res: Response) => {
         description: validatedData.description,
         accountId,
         clientId: validatedData.clientId,
-        ...(validatedData.extraCompound && {
-          extraCompounds: {
-            connect: {
-              id: validatedData.extraCompound,
-            },
-          },
-        }),
         ...(validatedData.diet && {
           diets: {
             connect: {
@@ -167,8 +178,15 @@ const updateProtocol = async (req: Request, res: Response) => {
         }),
         ...(validatedData.train && {
           trains: {
-            connect: validatedData.train.map((mealId: string) => ({
-              id: mealId,
+            connect: validatedData.train.map((id: string) => ({
+              id: id,
+            })),
+          },
+        }),
+        ...(validatedData.extraCompound && {
+          extraCompounds: {
+            connect: validatedData.extraCompound.map((id: string) => ({
+              id: id,
             })),
           },
         }),
@@ -213,4 +231,5 @@ export default {
   updateProtocol,
   deleteProtocol,
   getProtocolByClientId,
+  getProtocolsCount,
 };

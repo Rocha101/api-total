@@ -1,7 +1,6 @@
 import express from "express";
 import AuthController from "../controllers/auth.controller";
 import protocolController from "../controllers/protocol.controller";
-import paginate from "../middlewares/pagination";
 
 const router = express.Router();
 
@@ -10,6 +9,11 @@ router.get(
   "/:id",
   AuthController.verifyToken,
   protocolController.getProtocolById
+);
+router.get(
+  "/count/number",
+  AuthController.verifyToken,
+  protocolController.getProtocolsCount
 );
 router.get(
   "/clients/:clientId",

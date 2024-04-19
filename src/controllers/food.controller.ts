@@ -23,7 +23,12 @@ const foodSchema = object({
 // GET /foods
 const getAllFoods = async (req: Request, res: Response) => {
   try {
-    const foods = await prisma.food.findMany({});
+    const accountId = await getAccountId(req, res);
+    const foods = await prisma.food.findMany({
+      where: {
+        accountId,
+      },
+    });
     res.json(foods);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
