@@ -12,7 +12,7 @@ router.get(
   accountController.getClientsByCoachId
 );
 router.get(
-  "/clients/count",
+  "/clientsCountNumber",
   AuthController.verifyToken,
   accountController.getClientsCountByCoachId
 );

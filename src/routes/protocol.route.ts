@@ -11,7 +11,7 @@ router.get(
   protocolController.getProtocolById
 );
 router.get(
-  "/count/number",
+  "/countNumber",
   AuthController.verifyToken,
   protocolController.getProtocolsCount
 );
