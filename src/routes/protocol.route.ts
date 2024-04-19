@@ -10,11 +10,7 @@ router.get(
   AuthController.verifyToken,
   protocolController.getProtocolById
 );
-router.get(
-  "/countNumber",
-  AuthController.verifyToken,
-  protocolController.getProtocolsCount
-);
+
 router.get(
   "/clients/:clientId",
   AuthController.verifyToken,

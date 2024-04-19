@@ -11,11 +11,7 @@ router.get(
   AuthController.verifyToken,
   accountController.getClientsByCoachId
 );
-router.get(
-  "/clientsCountNumber",
-  AuthController.verifyToken,
-  accountController.getClientsCountByCoachId
-);
+
 router.get(
   "/:id",
   AuthController.verifyToken,
