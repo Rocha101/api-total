@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
+import { notEqual } from "assert";
 import { get } from "lodash";
 
 const prisma = new PrismaClient();
@@ -103,6 +104,7 @@ const updateHormonalProtocol = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const body = { ...req.body, accountId };
     const validatedData = hormonalProtocolSchema.parse(body);
+
     const updatedHormonalProtocol = await prisma.hormonalProtocol.update({
       where: {
         id,
@@ -110,7 +112,7 @@ const updateHormonalProtocol = async (req: Request, res: Response) => {
       data: {
         ...validatedData,
         hormones: {
-          connect: validatedData.hormones.map((id: string) => ({ id })),
+          set: validatedData.hormones.map((id: string) => ({ id })),
         },
       },
     });

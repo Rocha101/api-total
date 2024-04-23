@@ -19,6 +19,7 @@ const exerciseSchema = z.object({
   accountId: z.string(),
   sets: z.array(
     z.object({
+      id: z.string().optional(),
       quantity: z.number().int(),
       weight: z.number().optional(),
       setType: z.nativeEnum(SetType).optional(),
@@ -119,6 +120,16 @@ const createExercise = async (req: Request, res: Response) => {
   }
 };
 
+const deleteRepsAndSets = async (exerciseId: string) => {
+  await prisma.reps.deleteMany({
+    where: { sets: { exerciseId } },
+  });
+
+  await prisma.sets.deleteMany({
+    where: { exerciseId },
+  });
+};
+
 // PUT /exercises/:id
 const updateExercise = async (req: Request, res: Response) => {
   try {
@@ -126,6 +137,8 @@ const updateExercise = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const body = { ...req.body, accountId };
     const exerciseData = exerciseSchema.parse(body);
+
+    await deleteRepsAndSets(id);
 
     const exercise = await prisma.exercise.update({
       where: {
@@ -139,13 +152,9 @@ const updateExercise = async (req: Request, res: Response) => {
         equipment: exerciseData.equipment,
         account: { connect: { id: exerciseData.accountId } },
         sets: {
-          create: exerciseData.sets.map((set: any) => ({
+          create: exerciseData.sets.map((rep) => ({
             reps: {
-              create: set.reps.map((rep: any) => ({
-                quantity: rep.quantity,
-                weight: rep.weight,
-                setType: rep.setType,
-              })),
+              create: rep,
             },
           })),
         },

@@ -93,6 +93,20 @@ const updateMeal = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const body = { ...req.body, accountId };
     const validatedData = mealSchema.parse(body);
+
+    const foodsToDelete = await prisma.meal.findUnique({
+      where: {
+        id,
+      },
+      select: {
+        foods: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
     const updatedMeal = await prisma.meal.update({
       where: {
         id,
@@ -100,6 +114,9 @@ const updateMeal = async (req: Request, res: Response) => {
       data: {
         ...validatedData,
         foods: {
+          disconnect: foodsToDelete?.foods?.map((food) => ({
+            id: food.id,
+          })),
           connect: validatedData.foods?.map((foodId: string) => ({
             id: foodId,
           })),

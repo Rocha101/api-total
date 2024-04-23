@@ -136,6 +136,7 @@ const updateTrain = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const body = { ...req.body, accountId };
     const validatedData = trainSchema.parse(body);
+
     const updatedTrain = await prisma.train.update({
       where: {
         id,

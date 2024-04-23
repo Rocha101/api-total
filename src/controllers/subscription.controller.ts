@@ -14,8 +14,19 @@ const subscriptionIdSchema = object({
 const createSubscription = async (req: Request, res: Response) => {
   try {
     const validatedData = subscriptionSchema.parse(req.body);
+    const plan = await prisma.plan.findUnique({
+      where: { id: validatedData.planId },
+    });
+
+    if (!plan) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
     const subscription = await prisma.subscription.create({
       data: {
+        expiresAt: new Date(
+          new Date().setMonth(new Date().getMonth() + plan.duration)
+        ),
         plan: {
           connect: {
             id: validatedData.planId,
@@ -25,22 +36,7 @@ const createSubscription = async (req: Request, res: Response) => {
       include: { plan: true },
     });
 
-    if (subscription.plan) {
-      const subscriptionWithExpireDate = await prisma.subscription.update({
-        where: { id: subscription.id },
-        data: {
-          expiresAt: new Date(
-            subscription.createdAt.setMonth(
-              subscription.createdAt.getMonth() + subscription.plan.duration
-            )
-          ),
-        },
-      });
-
-      res.status(200).json(subscriptionWithExpireDate);
-    }
-
-    return res.status(404).json({ error: "Plan not found" });
+    return res.status(201).json(subscription);
   } catch (error) {
     res.status(500).json({ error: "Failed to create subscription" });
   }

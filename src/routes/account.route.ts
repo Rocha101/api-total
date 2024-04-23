@@ -1,7 +1,7 @@
 import express from "express";
 import AuthController from "../controllers/auth.controller";
 import accountController from "../controllers/account.controller";
-import paginate from "../middlewares/pagination";
+import { createRouteHandler } from "uploadthing/express";
 
 const router = express.Router();
 
@@ -11,7 +11,6 @@ router.get(
   AuthController.verifyToken,
   accountController.getClientsByCoachId
 );
-
 router.get(
   "/:id",
   AuthController.verifyToken,

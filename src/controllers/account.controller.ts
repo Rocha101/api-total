@@ -10,6 +10,15 @@ const accountSchema = object({
   password: string(),
   accountType: nativeEnum(AccountType),
   activationKey: string().optional(),
+  accountImageUrl: string().optional(),
+});
+
+const updateAccountSchema = object({
+  name: string().optional(),
+  email: string().email().optional(),
+  password: string().optional(),
+  activationKey: string().optional(),
+  accountImageUrl: string().optional(),
 });
 
 const getAccount = async (req: Request, res: Response) => {
@@ -68,7 +77,7 @@ const getClientsCountByCoachId = async (req: Request, res: Response) => {
 const updateAccount = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const validatedData = accountSchema.parse(req.body);
+    const validatedData = updateAccountSchema.parse(req.body);
 
     if (validatedData.activationKey) {
       const currentSubscription = await prisma.account.findUnique({
@@ -101,9 +110,12 @@ const updateAccount = async (req: Request, res: Response) => {
         id,
       },
       data: {
-        name: validatedData.name,
-        email: validatedData.email,
-        password: validatedData.password,
+        ...(validatedData.name && { name: validatedData.name }),
+        ...(validatedData.email && { email: validatedData.email }),
+        ...(validatedData.password && { password: validatedData.password }),
+        ...(validatedData.accountImageUrl && {
+          accountImageUrl: validatedData.accountImageUrl,
+        }),
         ...(validatedData.activationKey && {
           subscriptions: {
             connect: {

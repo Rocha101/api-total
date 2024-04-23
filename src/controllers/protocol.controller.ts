@@ -171,28 +171,28 @@ const updateProtocol = async (req: Request, res: Response) => {
         clientId: validatedData.clientId,
         ...(validatedData.diet && {
           diets: {
-            connect: {
+            set: {
               id: validatedData.diet,
             },
           },
         }),
         ...(validatedData.train && {
           trains: {
-            connect: validatedData.train.map((id: string) => ({
+            set: validatedData.train.map((id: string) => ({
               id: id,
             })),
           },
         }),
         ...(validatedData.extraCompound && {
           extraCompounds: {
-            connect: validatedData.extraCompound.map((id: string) => ({
+            set: validatedData.extraCompound.map((id: string) => ({
               id: id,
             })),
           },
         }),
         ...(validatedData.hormonalProtocol && {
           hormonalProtocols: {
-            connect: {
+            set: {
               id: validatedData.hormonalProtocol,
             },
           },
