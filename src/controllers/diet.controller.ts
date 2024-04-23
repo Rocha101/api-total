@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import { connect } from "http2";
 
 const prisma = new PrismaClient();
 

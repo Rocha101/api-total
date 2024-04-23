@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { object, string, number, enum as enumValidator } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import getPagination from "../utils/getPagination";
 
 const prisma = new PrismaClient();
 

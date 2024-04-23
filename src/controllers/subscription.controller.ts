@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { getAccountId } from "../utils/getAccountId";
-import { number, object, string } from "zod";
+import { object, string } from "zod";
 import prisma from "../models/prisma";
 
 const subscriptionSchema = object({

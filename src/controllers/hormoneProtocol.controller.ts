@@ -2,8 +2,6 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import { notEqual } from "assert";
-import { get } from "lodash";
 
 const prisma = new PrismaClient();
 

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
-import { object, string, number, union, enum as enumValidator } from "zod";
+import { object, string, number, enum as enumValidator } from "zod";
 import { getAccountId } from "../utils/getAccountId";
 
 const prisma = new PrismaClient();
