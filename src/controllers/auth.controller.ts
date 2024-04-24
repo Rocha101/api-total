@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../models/prisma";
 import { IssueData, nativeEnum, object, string } from "zod";
 import { AccountType } from "@prisma/client";
+import notificationController from "./notification.controller";
 
 const registerSchema = object({
   name: string(),
@@ -66,6 +67,21 @@ const registerUser = async (req: Request, res: Response) => {
         }),
       },
     });
+
+    await notificationController.createNotification({
+      title: "Bem-vindo ao Iron Atlas",
+      message:
+        "Seja bem-vindo ao Iron Atlas, a plataforma de bodybuilding mais completa do mercado",
+      accountId: newAccount.id,
+    });
+
+    if (newAccount.accountType === "CUSTOMER") {
+      await notificationController.createNotification({
+        title: `Novo cliente cadastrado: ${newAccount.name}`,
+        message: `O cliente ${newAccount.name} acabou de se cadastrar no CoachApp`,
+        accountId: newAccount.coachId as string,
+      });
+    }
 
     const token = jwt.sign({ account: newAccount }, "96172890", {
       expiresIn: 4500, // expires in 45 minutes
