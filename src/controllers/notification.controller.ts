@@ -16,7 +16,11 @@ const createNotification = async ({
   try {
     const notification = await prisma.notification.create({
       data: {
-        accountId,
+        account: {
+          connect: {
+            id: accountId,
+          },
+        },
         title,
         message,
         read,

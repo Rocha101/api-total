@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
+import notificationController from "./notification.controller";
 
 const prisma = new PrismaClient();
 
@@ -143,6 +144,13 @@ const createProtocol = async (req: Request, res: Response) => {
         }),
       },
     });
+
+    await notificationController.createNotification({
+      title: "Novo protocolo atribuido a você",
+      message: `O protocolo ${protocol.name} foi atribuido a você`,
+      accountId: validatedData.clientId as string,
+    });
+
     res.status(201).json(protocol);
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
@@ -199,6 +207,13 @@ const updateProtocol = async (req: Request, res: Response) => {
         }),
       },
     });
+
+    await notificationController.createNotification({
+      title: "Protocolo atualizado",
+      message: `O seu protocolo foi atualizado`,
+      accountId: validatedData.clientId as string,
+    });
+
     res.json(updatedProtocol);
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {

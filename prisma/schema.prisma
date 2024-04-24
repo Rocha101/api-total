@@ -34,7 +34,7 @@ model Account {
   foods             Food[]
   subscriptions     Subscription[]
   plans             Plan[]
-  Notification      Notification[]
+  notification      Notification[]
 }
 
 model Notification {
