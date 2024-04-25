@@ -38,7 +38,9 @@ const getNotificationsByAccountId = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const notifications = await prisma.notification.findMany({
       where: {
-        accountId,
+        account: {
+          id: accountId,
+        },
       },
     });
 

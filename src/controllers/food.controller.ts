@@ -57,7 +57,12 @@ const getFoodById = async (req: Request, res: Response) => {
 const createFood = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
+    const body = {
+      ...req.body,
+      account: {
+        id: accountId,
+      },
+    };
     const validatedData = foodSchema.parse(body);
     const food = await prisma.food.create({
       data: validatedData,
@@ -77,7 +82,12 @@ const updateFood = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
+    const body = {
+      ...req.body,
+      account: {
+        id: accountId,
+      },
+    };
     const validatedData = foodSchema.parse(body);
     const updatedFood = await prisma.food.update({
       where: {

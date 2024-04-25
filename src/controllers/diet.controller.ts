@@ -21,7 +21,9 @@ const getAllDiets = async (req: Request, res: Response) => {
 
     const diets = await prisma.diet.findMany({
       where: {
-        accountId,
+        account: {
+          id: accountId,
+        },
       },
       include: {
         meals: true,
@@ -90,7 +92,9 @@ const createDiet = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const body = {
       ...req.body,
-      accountId,
+      account: {
+        id: accountId,
+      },
     };
     const validatedData = dietSchema.parse(body);
     const diet = await prisma.diet.create({
@@ -118,7 +122,12 @@ const updateDiet = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
+    const body = {
+      ...req.body,
+      account: {
+        id: accountId,
+      },
+    };
     const validatedData = dietSchema.parse(body);
 
     const updatedDiet = await prisma.diet.update({

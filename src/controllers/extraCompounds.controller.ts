@@ -23,7 +23,9 @@ const getAllExtraCompounds = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const extraCompounds = await prisma.extraCompounds.findMany({
       where: {
-        accountId,
+        account: {
+          id: accountId,
+        },
       },
     });
     res.json(extraCompounds);
@@ -73,7 +75,12 @@ const getExtraCompoundByProtocolId = async (req: Request, res: Response) => {
 const createExtraCompound = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
+    const body = {
+      ...req.body,
+      account: {
+        id: accountId,
+      },
+    };
     const validatedData = extraCompoundSchema.parse(body);
     const extraCompound = await prisma.extraCompounds.create({
       data: validatedData,
@@ -93,7 +100,12 @@ const updateExtraCompound = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
+    const body = {
+      ...req.body,
+      account: {
+        id: accountId,
+      },
+    };
     const validatedData = extraCompoundSchema.parse(body);
     const updatedExtraCompound = await prisma.extraCompounds.update({
       where: {

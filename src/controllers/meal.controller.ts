@@ -62,7 +62,12 @@ const getMealById = async (req: Request, res: Response) => {
 const createMeal = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
+    const body = {
+      ...req.body,
+      account: {
+        id: accountId,
+      },
+    };
     const validatedData = mealSchema.parse(body);
 
     const meal = await prisma.meal.create({
@@ -90,21 +95,13 @@ const updateMeal = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
+    const body = {
+      ...req.body,
+      account: {
+        id: accountId,
+      },
+    };
     const validatedData = mealSchema.parse(body);
-
-    const foodsToDelete = await prisma.meal.findUnique({
-      where: {
-        id,
-      },
-      select: {
-        foods: {
-          select: {
-            id: true,
-          },
-        },
-      },
-    });
 
     const updatedMeal = await prisma.meal.update({
       where: {
@@ -113,10 +110,7 @@ const updateMeal = async (req: Request, res: Response) => {
       data: {
         ...validatedData,
         foods: {
-          disconnect: foodsToDelete?.foods?.map((food) => ({
-            id: food.id,
-          })),
-          connect: validatedData.foods?.map((foodId: string) => ({
+          set: validatedData.foods?.map((foodId: string) => ({
             id: foodId,
           })),
         },

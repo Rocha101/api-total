@@ -33,7 +33,9 @@ const getAllExercises = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const exercises = await prisma.exercise.findMany({
       where: {
-        accountId,
+        account: {
+          id: accountId,
+        },
       },
       include: {
         sets: {
@@ -83,8 +85,7 @@ const getExerciseById = async (req: Request, res: Response) => {
 const createExercise = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
-    const exerciseData = exerciseSchema.parse(body);
+    const exerciseData = exerciseSchema.parse(req.body);
 
     // Create Exercise
     const exercise = await prisma.exercise.create({
@@ -135,8 +136,7 @@ const updateExercise = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const accountId = await getAccountId(req, res);
-    const body = { ...req.body, accountId };
-    const exerciseData = exerciseSchema.parse(body);
+    const exerciseData = exerciseSchema.parse(req.body);
 
     await deleteRepsAndSets(id);
 
