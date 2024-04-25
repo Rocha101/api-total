@@ -125,16 +125,30 @@ const changeSubscription = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const validatedData = subscriptionIdSchema.parse(req.body);
-    const subscription = await prisma.subscription.deleteMany({
-      where: {
-        accountId,
-      },
+
+    const newSubscription = await prisma.subscription.findUnique({
+      where: { id: validatedData.activationId },
+      include: { plan: true },
     });
+
+    if (!newSubscription) {
+      return res.status(404).json({ error: "Subscription not found" });
+    }
+
+    if (!newSubscription.plan) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
     const accountWithNewSubscription = await prisma.account.update({
       where: { id: accountId },
       data: {
         subscriptions: {
-          connect: {
+          set: {
+            expiresAt: new Date(
+              new Date().setMonth(
+                new Date().getMonth() + newSubscription.plan.duration
+              )
+            ),
             id: validatedData.activationId,
           },
         },
