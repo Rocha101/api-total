@@ -90,16 +90,12 @@ const getDietByProtocolId = async (req: Request, res: Response) => {
 const createDiet = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = dietSchema.parse(body);
+
+    const validatedData = dietSchema.parse(req.body);
     const diet = await prisma.diet.create({
       data: {
         ...validatedData,
+        accountId: accountId as string,
         meals: {
           connect: validatedData.meals.map((mealId: string) => ({
             id: mealId,
@@ -122,13 +118,7 @@ const updateDiet = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = dietSchema.parse(body);
+    const validatedData = dietSchema.parse(req.body);
 
     const updatedDiet = await prisma.diet.update({
       where: {
@@ -136,6 +126,7 @@ const updateDiet = async (req: Request, res: Response) => {
       },
       data: {
         ...validatedData,
+        accountId,
         meals: {
           set: validatedData.meals.map((mealId: string) => ({
             id: mealId,

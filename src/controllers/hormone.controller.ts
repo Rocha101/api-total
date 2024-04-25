@@ -63,15 +63,12 @@ const getHormoneById = async (req: Request, res: Response) => {
 const createHormone = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = hormoneSchema.parse(body);
+    const validatedData = hormoneSchema.parse(req.body);
     const hormone = await prisma.hormone.create({
-      data: validatedData,
+      data: {
+        ...validatedData,
+        accountId,
+      },
     });
     res.status(201).json(hormone);
   } catch (error) {
@@ -88,18 +85,15 @@ const updateHormone = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = hormoneSchema.parse(body);
+    const validatedData = hormoneSchema.parse(req.body);
     const updatedHormone = await prisma.hormone.update({
       where: {
         id,
       },
-      data: validatedData,
+      data: {
+        ...validatedData,
+        accountId,
+      },
     });
     res.json(updatedHormone);
   } catch (error) {

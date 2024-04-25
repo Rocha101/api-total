@@ -28,7 +28,12 @@ const mealSchema = object({
 // GET /meals
 const getAllMeals = async (req: Request, res: Response) => {
   try {
-    const meals = await prisma.meal.findMany({});
+    const accountId = await getAccountId(req, res);
+    const meals = await prisma.meal.findMany({
+      where: {
+        accountId,
+      },
+    });
 
     res.json(meals);
   } catch (error) {
@@ -62,17 +67,13 @@ const getMealById = async (req: Request, res: Response) => {
 const createMeal = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = mealSchema.parse(body);
+
+    const validatedData = mealSchema.parse(req.body);
 
     const meal = await prisma.meal.create({
       data: {
         ...validatedData,
+        accountId: accountId as string,
         foods: {
           connect: validatedData.foods?.map((foodId: string) => ({
             id: foodId,
@@ -95,13 +96,8 @@ const updateMeal = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = mealSchema.parse(body);
+
+    const validatedData = mealSchema.parse(req.body);
 
     const updatedMeal = await prisma.meal.update({
       where: {
@@ -109,6 +105,7 @@ const updateMeal = async (req: Request, res: Response) => {
       },
       data: {
         ...validatedData,
+        accountId,
         foods: {
           set: validatedData.foods?.map((foodId: string) => ({
             id: foodId,

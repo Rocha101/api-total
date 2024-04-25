@@ -57,15 +57,12 @@ const getFoodById = async (req: Request, res: Response) => {
 const createFood = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = foodSchema.parse(body);
+    const validatedData = foodSchema.parse(req.body);
     const food = await prisma.food.create({
-      data: validatedData,
+      data: {
+        ...validatedData,
+        accountId,
+      },
     });
     res.status(201).json(food);
   } catch (error) {
@@ -82,18 +79,15 @@ const updateFood = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = foodSchema.parse(body);
+    const validatedData = foodSchema.parse(req.body);
     const updatedFood = await prisma.food.update({
       where: {
         id,
       },
-      data: validatedData,
+      data: {
+        ...validatedData,
+        accountId,
+      },
     });
     res.json(updatedFood);
   } catch (error) {

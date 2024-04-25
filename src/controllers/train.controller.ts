@@ -107,17 +107,11 @@ const getTrainByProtocolId = async (req: Request, res: Response) => {
 const createTrain = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-      accountId,
-    };
-    const validatedData = trainSchema.parse(body);
+    const validatedData = trainSchema.parse(req.body);
     const train = await prisma.train.create({
       data: {
         ...validatedData,
+        accountId: accountId as string,
         exercises: {
           connect: validatedData.exercises.map((exerciseId: string) => ({
             id: exerciseId,
@@ -140,14 +134,8 @@ const updateTrain = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-      accountId,
-    };
-    const validatedData = trainSchema.parse(body);
+
+    const validatedData = trainSchema.parse(req.body);
 
     const updatedTrain = await prisma.train.update({
       where: {
@@ -155,6 +143,7 @@ const updateTrain = async (req: Request, res: Response) => {
       },
       data: {
         ...validatedData,
+        accountId,
         exercises: {
           set: validatedData.exercises.map((exerciseId: string) => ({
             id: exerciseId,

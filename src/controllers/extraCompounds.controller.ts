@@ -78,7 +78,9 @@ const createExtraCompound = async (req: Request, res: Response) => {
     const body = {
       ...req.body,
       account: {
-        id: accountId,
+        connect: {
+          id: accountId,
+        },
       },
     };
     const validatedData = extraCompoundSchema.parse(body);
@@ -103,7 +105,9 @@ const updateExtraCompound = async (req: Request, res: Response) => {
     const body = {
       ...req.body,
       account: {
-        id: accountId,
+        connect: {
+          id: accountId,
+        },
       },
     };
     const validatedData = extraCompoundSchema.parse(body);

@@ -75,16 +75,11 @@ const getHormonalProtocolByProtocolId = async (req: Request, res: Response) => {
 const createHormonalProtocol = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = hormonalProtocolSchema.parse(body);
+    const validatedData = hormonalProtocolSchema.parse(req.body);
     const hormonalProtocol = await prisma.hormonalProtocol.create({
       data: {
         ...validatedData,
+        accountId,
         hormones: {
           connect: validatedData.hormones.map((id: string) => ({ id })),
         },
@@ -105,13 +100,7 @@ const updateHormonalProtocol = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        id: accountId,
-      },
-    };
-    const validatedData = hormonalProtocolSchema.parse(body);
+    const validatedData = hormonalProtocolSchema.parse(req.body);
 
     const updatedHormonalProtocol = await prisma.hormonalProtocol.update({
       where: {
@@ -119,6 +108,7 @@ const updateHormonalProtocol = async (req: Request, res: Response) => {
       },
       data: {
         ...validatedData,
+        accountId,
         hormones: {
           set: validatedData.hormones.map((id: string) => ({ id })),
         },

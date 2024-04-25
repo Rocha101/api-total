@@ -95,7 +95,7 @@ const createExercise = async (req: Request, res: Response) => {
         type: exerciseData.type as any,
         muscleGroup: exerciseData.muscleGroup as any,
         equipment: exerciseData.equipment,
-        account: { connect: { id: exerciseData.accountId } },
+        account: { connect: { id: accountId } },
         sets: {
           create: exerciseData.sets.map((set: any) => ({
             reps: {
@@ -150,7 +150,7 @@ const updateExercise = async (req: Request, res: Response) => {
         type: exerciseData.type as any,
         muscleGroup: exerciseData.muscleGroup as any,
         equipment: exerciseData.equipment,
-        account: { connect: { id: exerciseData.accountId } },
+        account: { connect: { id: accountId } },
         sets: {
           create: exerciseData.sets.map((rep) => ({
             reps: {
