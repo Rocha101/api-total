@@ -144,20 +144,19 @@ const changeSubscription = async (req: Request, res: Response) => {
       data: {
         subscriptions: {
           set: {
-            expiresAt: new Date(
-              new Date().setMonth(
-                new Date().getMonth() + newSubscription.plan.duration
-              )
-            ),
-            id: validatedData.activationId,
+            id: newSubscription.id,
           },
         },
       },
-      include: { subscriptions: true },
+      include: {
+        subscriptions: {
+          include: { plan: true },
+        },
+      },
     });
-    res.status(200).json(accountWithNewSubscription);
+    return res.status(200).json(accountWithNewSubscription);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update subscription" });
+    return res.status(500).json({ error: "Failed to update subscription" });
   }
 };
 
