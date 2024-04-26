@@ -16,7 +16,7 @@ const foodSchema = object({
   carbs: number().optional(),
   fats: number().optional(),
   mealId: string().optional(),
-  accountId: string(),
+  accountId: string().optional(),
 });
 
 // GET /foods
