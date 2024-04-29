@@ -15,6 +15,7 @@ import subscriptionRoute from "./routes/subscription.route";
 import planRoute from "./routes/plans.route";
 import dashboardRoute from "./routes/dashboard.route";
 import notificationRoute from "./routes/notification.route";
+import recoverPasswordRoute from "./routes/recoverPassword.route";
 import qs from "qs";
 
 export const prisma = new PrismaClient();
@@ -42,6 +43,7 @@ async function main() {
   app.use("/plan", planRoute);
   app.use("/dashboard", dashboardRoute);
   app.use("/notification", notificationRoute);
+  app.use("/recover-password", recoverPasswordRoute);
 
   app.all("*", (req: Request, res: Response) => {
     res.status(404).json({ error: `Route ${req.originalUrl} not found` });
