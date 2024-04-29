@@ -21,7 +21,7 @@ const mealSchema = object({
   totalCarbs: number().optional(),
   totalFats: number().optional(),
   dietId: string().optional(),
-  accountId: string(),
+  accountId: string().optional(),
   foods: string().array().optional(),
 });
 

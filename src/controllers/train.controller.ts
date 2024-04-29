@@ -12,7 +12,7 @@ const trainSchema = object({
   description: string().optional(),
   exercises: string().array(),
   weekDays: nativeEnum(WeekDay).array().optional(),
-  accountId: string(),
+  accountId: string().optional(),
   protocolId: string().optional(),
 });
 

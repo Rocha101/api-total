@@ -10,7 +10,7 @@ const dietSchema = object({
   name: string(),
   description: string().optional(),
   protocolId: string().optional(),
-  accountId: string(),
+  accountId: string().optional(),
   meals: string().array(),
 });
 
