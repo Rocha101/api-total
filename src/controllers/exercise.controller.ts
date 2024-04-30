@@ -16,7 +16,7 @@ const exerciseSchema = z.object({
   type: z.nativeEnum(ExerciseType).optional(),
   muscleGroup: z.nativeEnum(MuscleGroup).optional(),
   equipment: z.string().optional(),
-  accountId: z.string(),
+  accountId: z.string().optional(),
   sets: z.array(
     z.object({
       id: z.string().optional(),
