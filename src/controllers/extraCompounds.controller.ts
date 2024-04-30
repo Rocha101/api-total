@@ -75,17 +75,12 @@ const getExtraCompoundByProtocolId = async (req: Request, res: Response) => {
 const createExtraCompound = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        connect: {
-          id: accountId,
-        },
-      },
-    };
-    const validatedData = extraCompoundSchema.parse(body);
+    const validatedData = extraCompoundSchema.parse(req.body);
     const extraCompound = await prisma.extraCompounds.create({
-      data: validatedData,
+      data: {
+        ...validatedData,
+        accountId: accountId as string,
+      },
     });
     res.status(201).json(extraCompound);
   } catch (error) {
@@ -102,20 +97,16 @@ const updateExtraCompound = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const accountId = await getAccountId(req, res);
-    const body = {
-      ...req.body,
-      account: {
-        connect: {
-          id: accountId,
-        },
-      },
-    };
-    const validatedData = extraCompoundSchema.parse(body);
+
+    const validatedData = extraCompoundSchema.parse(req.body);
     const updatedExtraCompound = await prisma.extraCompounds.update({
       where: {
         id,
       },
-      data: validatedData,
+      data: {
+        ...validatedData,
+        accountId,
+      },
     });
     res.json(updatedExtraCompound);
   } catch (error) {
