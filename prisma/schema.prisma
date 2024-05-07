@@ -28,7 +28,7 @@ model Account {
   extraCompounds    ExtraCompounds[]
   diets             Diet[]
   hormonalProtocols HormonalProtocol[]
-  coach             Account?           @relation("CoachAccount", fields: [coachId], references: [id])
+  coach             Account?           @relation("CoachAccount", fields: [coachId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   coachId           String?
   clients           Account[]          @relation("CoachAccount")
   foods             Food[]
@@ -45,7 +45,7 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  account   Account  @relation(fields: [accountId], references: [id])
+  account   Account  @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId String
 }
 
@@ -53,10 +53,10 @@ model Subscription {
   id        String    @id @default(cuid())
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  account   Account?  @relation(fields: [accountId], references: [id])
+  account   Account?  @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId String?
   expiresAt DateTime?
-  plan      Plan?     @relation(fields: [planId], references: [id])
+  plan      Plan?     @relation(fields: [planId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   planId    String?
 }
 
@@ -68,7 +68,7 @@ model Plan {
   duration      Int
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  account       Account?       @relation(fields: [accountId], references: [id])
+  account       Account?       @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId     String?
   subscriptions Subscription[]
 }
@@ -89,11 +89,11 @@ model Train {
   description String?
   exercises   Exercise[]
   weekDays    WeekDay[]
-  protocol    Protocol?  @relation(fields: [protocolId], references: [id])
+  protocol    Protocol?  @relation(fields: [protocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   protocolId  String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  account     Account    @relation(fields: [accountId], references: [id])
+  account     Account    @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId   String
 }
 
@@ -110,7 +110,7 @@ model Reps {
   setType   SetType?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  sets      Sets     @relation(fields: [setsId], references: [id])
+  sets      Sets     @relation(fields: [setsId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   setsId    String
 }
 
@@ -126,7 +126,7 @@ model Sets {
   id         String   @id @default(cuid())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   exerciseId String
   reps       Reps[]
 }
@@ -160,11 +160,11 @@ model Exercise {
   type        ExerciseType? @default(STRENGHT)
   muscleGroup MuscleGroup?
   equipment   String?
-  train       Train?        @relation(fields: [trainId], references: [id])
+  train       Train?        @relation(fields: [trainId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   trainId     String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  account     Account       @relation(fields: [accountId], references: [id])
+  account     Account       @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId   String
 }
 
@@ -173,11 +173,11 @@ model Diet {
   name        String
   description String?
   meals       Meal[]
-  protocol    Protocol? @relation(fields: [protocolId], references: [id])
+  protocol    Protocol? @relation(fields: [protocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   protocolId  String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  account     Account   @relation(fields: [accountId], references: [id])
+  account     Account   @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId   String
 }
 
@@ -205,9 +205,9 @@ model Meal {
   totalProteins Float?
   totalCarbs    Float?
   totalFats     Float?
-  diet          Diet?    @relation(fields: [dietId], references: [id])
+  diet          Diet?    @relation(fields: [dietId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   dietId        String?
-  account       Account  @relation(fields: [accountId], references: [id])
+  account       Account  @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId     String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -225,9 +225,9 @@ model Food {
   fats        Float?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  meal        Meal?     @relation(fields: [mealId], references: [id])
+  meal        Meal?     @relation(fields: [mealId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   mealId      String?
-  account     Account?  @relation(fields: [accountId], references: [id])
+  account     Account?  @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId   String?
 }
 
@@ -256,11 +256,11 @@ model Hormone {
   unit               HormoneUnit
   concentrationUnit  ConcentrationUnit?
   hormoneType        HormoneType
-  hormonalProtocol   HormonalProtocol?  @relation(fields: [hormonalProtocolId], references: [id])
+  hormonalProtocol   HormonalProtocol?  @relation(fields: [hormonalProtocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   hormonalProtocolId String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
-  account            Account?           @relation(fields: [accountId], references: [id])
+  account            Account?           @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId          String?
 }
 
@@ -274,9 +274,9 @@ model ExtraCompounds {
   concentrationUnit ConcentrationUnit?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-  protocol          Protocol?          @relation(fields: [protocolId], references: [id])
+  protocol          Protocol?          @relation(fields: [protocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   protocolId        String?
-  account           Account?           @relation(fields: [accountId], references: [id])
+  account           Account?           @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId         String?
 }
 
@@ -287,9 +287,9 @@ model HormonalProtocol {
   hormones    Hormone[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  protocol    Protocol? @relation(fields: [protocolId], references: [id])
+  protocol    Protocol? @relation(fields: [protocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   protocolId  String?
-  account     Account?  @relation(fields: [accountId], references: [id])
+  account     Account?  @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId   String?
 }
 
@@ -306,7 +306,7 @@ model Protocol {
   trains            Train[]
   diets             Diet[]
   extraCompounds    ExtraCompounds[]
-  account           Account?           @relation(fields: [accountId], references: [id])
+  account           Account?           @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId         String?
   clientId          String?
   createdAt         DateTime           @default(now())

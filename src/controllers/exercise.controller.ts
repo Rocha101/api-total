@@ -180,18 +180,6 @@ const updateExercise = async (req: Request, res: Response) => {
 const deleteExercise = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    await prisma.reps.deleteMany({
-      where: {
-        sets: {
-          exerciseId: id,
-        },
-      },
-    });
-    await prisma.sets.deleteMany({
-      where: {
-        exerciseId: id,
-      },
-    });
     await prisma.exercise.delete({
       where: {
         id,
@@ -199,7 +187,7 @@ const deleteExercise = async (req: Request, res: Response) => {
     });
     res.status(204).send();
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: error });
   }
 };
 
