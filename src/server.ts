@@ -21,7 +21,7 @@ import qs from "qs";
 export const prisma = new PrismaClient();
 
 const app = express();
-const port: number = (process.env.PORT as unknown as number) || 3001;
+const port: number = (process.env.PORT as unknown as number) || 3002;
 var cors = require("cors");
 
 async function main() {

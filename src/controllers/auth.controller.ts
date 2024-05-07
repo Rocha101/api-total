@@ -78,7 +78,7 @@ const registerUser = async (req: Request, res: Response) => {
     if (newAccount.accountType === "CUSTOMER") {
       await notificationController.createNotification({
         title: `Novo cliente cadastrado: ${newAccount.name}`,
-        message: `O cliente ${newAccount.name} acabou de se cadastrar no CoachApp`,
+        message: `O cliente ${newAccount.name} acabou de se cadastrar no Iron Atlas`,
         accountId: newAccount.coachId as string,
       });
     }

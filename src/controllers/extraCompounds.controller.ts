@@ -7,12 +7,16 @@ const prisma = new PrismaClient();
 
 // Zod schema for validating the request body when creating or updating an extra compound
 const extraCompoundSchema = object({
-  name: string(),
+  name: string({
+    required_error: "Nome é obrigatório",
+  }),
   description: string().optional(),
-  quantity: number(),
+  quantity: number({
+    required_error: "Quantidade é obrigatória",
+  }),
   concentration: number().optional(),
+  unit: enumValidator(["MG", "ML", "UI", "UNIT"]),
   concentrationUnit: enumValidator(["MG_ML", "MG"]).optional(),
-  unit: enumValidator(["MG", "ML", "UI"]),
   protocolId: string().optional(),
   accountId: string().optional(),
 });
@@ -76,6 +80,7 @@ const createExtraCompound = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const validatedData = extraCompoundSchema.parse(req.body);
+
     const extraCompound = await prisma.extraCompounds.create({
       data: {
         ...validatedData,
@@ -85,7 +90,7 @@ const createExtraCompound = async (req: Request, res: Response) => {
     res.status(201).json(extraCompound);
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
-      res.status(400).json({ error: "Invalid request body" });
+      res.status(400).json({ error: "Invalid request body", details: error });
     } else {
       res.status(500).json({ error: "Internal server error" });
     }

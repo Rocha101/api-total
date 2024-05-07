@@ -135,6 +135,13 @@ const updateAccount = async (req: Request, res: Response) => {
 const deleteAccount = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+
+    const deleteNotifications = await prisma.notification.deleteMany({
+      where: {
+        accountId: id,
+      },
+    });
+
     const deletedAccount = await prisma.account.delete({
       where: {
         id,
