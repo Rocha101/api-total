@@ -33,6 +33,9 @@ const getAllMeals = async (req: Request, res: Response) => {
       where: {
         accountId,
       },
+      include: {
+        foods: true,
+      },
     });
 
     res.json(meals);
