@@ -78,7 +78,11 @@ const getTrainByProtocolId = async (req: Request, res: Response) => {
   try {
     const train = await prisma.train.findMany({
       where: {
-        protocolId,
+        protocols: {
+          some: {
+            id: protocolId,
+          },
+        },
       },
       include: {
         exercises: {
@@ -124,7 +128,7 @@ const createTrain = async (req: Request, res: Response) => {
     if (error instanceof Error && error.name === "ZodError") {
       res.status(400).json({ error: "Invalid request body" });
     } else {
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: "Internal server error", details: error });
     }
   }
 };

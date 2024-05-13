@@ -18,7 +18,6 @@ const extraCompoundSchema = object({
   unit: enumValidator(["MG", "ML", "UI", "UNIT"]),
   concentrationUnit: enumValidator(["MG_ML", "MG"]).optional(),
   protocolId: string().optional(),
-  accountId: string().optional(),
 });
 
 // GET /extraCompounds
@@ -27,9 +26,7 @@ const getAllExtraCompounds = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const extraCompounds = await prisma.extraCompounds.findMany({
       where: {
-        account: {
-          id: accountId,
-        },
+        accountId,
       },
     });
     res.json(extraCompounds);
@@ -62,7 +59,11 @@ const getExtraCompoundByProtocolId = async (req: Request, res: Response) => {
   try {
     const extraCompounds = await prisma.extraCompounds.findMany({
       where: {
-        protocolId,
+        protocols: {
+          some: {
+            id: protocolId,
+          },
+        },
       },
     });
     if (!extraCompounds) {
@@ -110,7 +111,7 @@ const updateExtraCompound = async (req: Request, res: Response) => {
       },
       data: {
         ...validatedData,
-        accountId,
+        accountId: accountId as string,
       },
     });
     res.json(updatedExtraCompound);
@@ -118,7 +119,7 @@ const updateExtraCompound = async (req: Request, res: Response) => {
     if (error instanceof Error && error.name === "ZodError") {
       res.status(400).json({ error: "Invalid request body" });
     } else {
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: "Internal server error", details: error });
     }
   }
 };

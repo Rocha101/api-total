@@ -89,8 +89,7 @@ model Train {
   description String?
   exercises   Exercise[]
   weekDays    WeekDay[]
-  protocol    Protocol?  @relation(fields: [protocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  protocolId  String?
+  protocols   Protocol[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   account     Account    @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
@@ -160,8 +159,7 @@ model Exercise {
   type        ExerciseType? @default(STRENGHT)
   muscleGroup MuscleGroup?
   equipment   String?
-  train       Train?        @relation(fields: [trainId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  trainId     String?
+  trains      Train[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   account     Account       @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
@@ -169,15 +167,14 @@ model Exercise {
 }
 
 model Diet {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
   description String?
   meals       Meal[]
-  protocol    Protocol? @relation(fields: [protocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  protocolId  String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  account     Account   @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  protocols   Protocol[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  account     Account    @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId   String
 }
 
@@ -205,8 +202,7 @@ model Meal {
   totalProteins Float?
   totalCarbs    Float?
   totalFats     Float?
-  diet          Diet?    @relation(fields: [dietId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  dietId        String?
+  diets         Diet[]
   account       Account  @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId     String
   createdAt     DateTime @default(now())
@@ -247,20 +243,19 @@ enum HormoneUnit {
 }
 
 model Hormone {
-  id                 String             @id @default(cuid())
-  name               String
-  description        String?
-  quantity           Float
-  concentration      Float?
-  unit               HormoneUnit
-  concentrationUnit  ConcentrationUnit?
-  hormoneType        HormoneType
-  hormonalProtocol   HormonalProtocol?  @relation(fields: [hormonalProtocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  hormonalProtocolId String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  account            Account?           @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  accountId          String?
+  id                String             @id @default(cuid())
+  name              String
+  description       String?
+  quantity          Float
+  concentration     Float?
+  unit              HormoneUnit
+  concentrationUnit ConcentrationUnit?
+  hormoneType       HormoneType
+  hormonalProtocols HormonalProtocol[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  account           Account?           @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  accountId         String?
 }
 
 model ExtraCompounds {
@@ -273,22 +268,20 @@ model ExtraCompounds {
   concentrationUnit ConcentrationUnit?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-  protocol          Protocol?          @relation(fields: [protocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  protocolId        String?
+  protocols         Protocol[]
   account           Account?           @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId         String?
 }
 
 model HormonalProtocol {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
   description String?
   hormones    Hormone[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  protocol    Protocol? @relation(fields: [protocolId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  protocolId  String?
-  account     Account?  @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  protocols   Protocol[]
+  account     Account?   @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
   accountId   String?
 }
 

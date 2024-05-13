@@ -21,9 +21,7 @@ const getAllDiets = async (req: Request, res: Response) => {
 
     const diets = await prisma.diet.findMany({
       where: {
-        account: {
-          id: accountId,
-        },
+        accountId,
       },
       include: {
         meals: true,
@@ -66,7 +64,11 @@ const getDietByProtocolId = async (req: Request, res: Response) => {
   try {
     const diets = await prisma.diet.findMany({
       where: {
-        protocolId,
+        protocols: {
+          some: {
+            id: protocolId,
+          },
+        },
       },
       include: {
         meals: {

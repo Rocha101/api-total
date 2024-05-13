@@ -16,11 +16,7 @@ const createNotification = async ({
   try {
     const notification = await prisma.notification.create({
       data: {
-        account: {
-          connect: {
-            id: accountId,
-          },
-        },
+        accountId,
         title,
         message,
         read,
@@ -38,9 +34,7 @@ const getNotificationsByAccountId = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const notifications = await prisma.notification.findMany({
       where: {
-        account: {
-          id: accountId,
-        },
+        accountId,
       },
     });
 

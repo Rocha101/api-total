@@ -24,9 +24,7 @@ const getAllProtocols = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const protocols = await prisma.protocol.findMany({
       where: {
-        account: {
-          id: accountId,
-        },
+        accountId,
       },
       include: {
         diets: true,
@@ -46,9 +44,7 @@ const getProtocolsCount = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const count = await prisma.protocol.count({
       where: {
-        account: {
-          id: accountId,
-        },
+        accountId,
       },
     });
     res.json(count);
@@ -115,11 +111,7 @@ const createProtocol = async (req: Request, res: Response) => {
       data: {
         name: validatedData.name,
         description: validatedData.description,
-        account: {
-          connect: {
-            id: accountId,
-          },
-        },
+        accountId,
         clientId: validatedData.clientId,
         ...(validatedData.diet && {
           diets: {
@@ -183,11 +175,7 @@ const updateProtocol = async (req: Request, res: Response) => {
         name: validatedData.name,
         description: validatedData.description,
         clientId: validatedData.clientId,
-        account: {
-          connect: {
-            id: accountId,
-          },
-        },
+        accountId,
         ...(validatedData.diet && {
           diets: {
             set: {

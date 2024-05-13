@@ -33,9 +33,7 @@ const getAllExercises = async (req: Request, res: Response) => {
     const accountId = await getAccountId(req, res);
     const exercises = await prisma.exercise.findMany({
       where: {
-        account: {
-          id: accountId,
-        },
+        accountId,
       },
       include: {
         sets: {
@@ -43,7 +41,7 @@ const getAllExercises = async (req: Request, res: Response) => {
             reps: true,
           },
         },
-        train: true,
+        trains: true,
         account: true,
       },
     });
@@ -67,7 +65,7 @@ const getExerciseById = async (req: Request, res: Response) => {
             reps: true,
           },
         },
-        train: true,
+        trains: true,
         account: true,
       },
     });
@@ -95,7 +93,7 @@ const createExercise = async (req: Request, res: Response) => {
         type: exerciseData.type as any,
         muscleGroup: exerciseData.muscleGroup as any,
         equipment: exerciseData.equipment,
-        account: { connect: { id: accountId } },
+        accountId: accountId as string,
         sets: {
           create: exerciseData.sets.map((set: any) => ({
             reps: {
@@ -150,7 +148,7 @@ const updateExercise = async (req: Request, res: Response) => {
         type: exerciseData.type as any,
         muscleGroup: exerciseData.muscleGroup as any,
         equipment: exerciseData.equipment,
-        account: { connect: { id: accountId } },
+        accountId: accountId as string,
         sets: {
           create: exerciseData.sets.map((rep) => ({
             reps: {

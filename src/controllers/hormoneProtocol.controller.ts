@@ -59,7 +59,11 @@ const getHormonalProtocolByProtocolId = async (req: Request, res: Response) => {
   try {
     const hormonalProtocols = await prisma.hormonalProtocol.findMany({
       where: {
-        protocolId,
+        protocols: {
+          some: {
+            id: protocolId,
+          },
+        },
       },
       include: {
         hormones: true,
