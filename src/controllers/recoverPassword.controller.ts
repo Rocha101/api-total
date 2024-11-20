@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import jwt from "jsonwebtoken";
-import prisma from "../models/prisma";
+import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 import { z } from "zod";
 

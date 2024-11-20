@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { number, object, string } from "zod";
-import prisma from "../models/prisma";
+import { prisma } from "../lib/prisma";
 
 const planSchema = object({
   name: string(),

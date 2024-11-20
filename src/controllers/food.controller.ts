@@ -1,9 +1,9 @@
-import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Request, Response, NextFunction } from "express";
 import { object, string, number, enum as enumValidator } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
+import { ApiResponse } from "../utils/apiResponse";
+import { AppError } from "../utils/errorHandler";
 
 // Zod schema for validating the request body when creating or updating a food
 const foodSchema = object({
@@ -19,98 +19,83 @@ const foodSchema = object({
   accountId: string().optional(),
 });
 
-// GET /foods
-const getAllFoods = async (req: Request, res: Response) => {
+export const getAllFoods = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const accountId = await getAccountId(req, res);
     const foods = await prisma.food.findMany({
-      where: {
-        accountId,
-      },
+      where: { accountId },
     });
-    res.json(foods);
+    return ApiResponse.success(res, foods);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-// GET /foods/:id
-const getFoodById = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const getFoodById = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { id } = req.params;
     const food = await prisma.food.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
     });
+
     if (!food) {
-      res.status(404).json({ error: "Food not found" });
-    } else {
-      res.json(food);
+      throw new AppError("Food not found", 404);
     }
+
+    return ApiResponse.success(res, food);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-// POST /foods
-const createFood = async (req: Request, res: Response) => {
+export const createFood = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const accountId = await getAccountId(req, res);
     const validatedData = foodSchema.parse(req.body);
+
     const food = await prisma.food.create({
       data: {
         ...validatedData,
-        accountId,
+        accountId: accountId as string,
       },
     });
-    res.status(201).json(food);
+
+    return ApiResponse.created(res, food);
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
-      res.status(400).json({ error: "Invalid request body" });
-    } else {
-      res.status(500).json({ error: "Internal server error" });
-    }
+    next(error);
   }
 };
 
-// PUT /foods/:id
-const updateFood = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const updateFood = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { id } = req.params;
     const accountId = await getAccountId(req, res);
     const validatedData = foodSchema.parse(req.body);
-    const updatedFood = await prisma.food.update({
-      where: {
-        id,
-      },
+
+    const food = await prisma.food.update({
+      where: { id },
       data: {
         ...validatedData,
-        accountId,
+        accountId: accountId as string,
       },
     });
-    res.json(updatedFood);
+
+    return ApiResponse.success(res, food, "Food updated successfully");
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
-      res.status(400).json({ error: "Invalid request body" });
-    } else {
-      res.status(500).json({ error: "Internal server error" });
-    }
+    next(error);
   }
 };
 
-// DELETE /foods/:id
-const deleteFood = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteFood = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { id } = req.params;
     await prisma.food.delete({
-      where: {
-        id,
-      },
+      where: { id },
     });
-    res.status(204).send();
+
+    return ApiResponse.success(res, null, "Food deleted successfully");
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 

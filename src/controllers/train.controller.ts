@@ -1,10 +1,10 @@
-import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Request, Response, NextFunction } from "express";
 import { nativeEnum, object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
 import { WeekDay } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
+import { ApiResponse } from "../utils/apiResponse";
+import { AppError } from "../utils/errorHandler";
 
 // Zod schema for validating the request body when creating or updating a train
 const trainSchema = object({
@@ -16,14 +16,11 @@ const trainSchema = object({
   protocolId: string().optional(),
 });
 
-// GET /trains
-const getAllTrains = async (req: Request, res: Response) => {
+export const getAllTrains = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const accountId = await getAccountId(req, res);
     const trains = await prisma.train.findMany({
-      where: {
-        accountId,
-      },
+      where: { accountId },
       include: {
         exercises: {
           include: {
@@ -36,20 +33,17 @@ const getAllTrains = async (req: Request, res: Response) => {
         },
       },
     });
-    res.json(trains);
+    return ApiResponse.success(res, trains);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-// GET /trains/:id
-const getTrainById = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const getTrainById = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { id } = req.params;
     const train = await prisma.train.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
       include: {
         exercises: {
           include: {
@@ -64,18 +58,90 @@ const getTrainById = async (req: Request, res: Response) => {
     });
 
     if (!train) {
-      res.status(404).json({ error: "Train not found" });
-    } else {
-      res.json(train);
+      throw new AppError("Train not found", 404);
     }
+
+    return ApiResponse.success(res, train);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-const getTrainByProtocolId = async (req: Request, res: Response) => {
-  const { protocolId } = req.params;
+export const createTrain = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const accountId = await getAccountId(req, res);
+    const validatedData = trainSchema.parse(req.body);
+    
+    const train = await prisma.train.create({
+      data: {
+        ...validatedData,
+        accountId: accountId as string,
+        exercises: {
+          connect: validatedData.exercises.map((exerciseId: string) => ({
+            id: exerciseId,
+          })),
+        },
+      },
+    });
+
+    return ApiResponse.created(res, train);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTrain = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const validatedData = trainSchema.parse(req.body);
+    const accountId = await getAccountId(req, res);
+
+    const train = await prisma.train.update({
+      where: { id },
+      data: {
+        ...validatedData,
+        accountId: accountId as string,
+        exercises: {
+          set: validatedData.exercises.map((exerciseId: string) => ({
+            id: exerciseId,
+          })),
+        },
+      },
+      include: {
+        exercises: {
+          include: {
+            sets: {
+              include: {
+                reps: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return ApiResponse.success(res, train, "Train updated successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTrain = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await prisma.train.delete({
+      where: { id },
+    });
+
+    return ApiResponse.success(res, null, "Train deleted successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTrainByProtocolId = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { protocolId } = req.params;
     const train = await prisma.train.findMany({
       where: {
         protocols: {
@@ -98,85 +164,12 @@ const getTrainByProtocolId = async (req: Request, res: Response) => {
     });
 
     if (!train) {
-      res.status(404).json({ error: "Train not found" });
-    } else {
-      res.json(train);
+      throw new AppError("Train not found", 404);
     }
+
+    return ApiResponse.success(res, train);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-// POST /trains
-const createTrain = async (req: Request, res: Response) => {
-  try {
-    const accountId = await getAccountId(req, res);
-    const validatedData = trainSchema.parse(req.body);
-    const train = await prisma.train.create({
-      data: {
-        ...validatedData,
-        accountId: accountId as string,
-        exercises: {
-          connect: validatedData.exercises.map((exerciseId: string) => ({
-            id: exerciseId,
-          })),
-        },
-      },
-    });
-    res.status(201).json(train);
-  } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
-      res.status(400).json({ error: "Invalid request body" });
-    } else {
-      res.status(500).json({ error: "Internal server error", details: error });
-    }
-  }
-};
-
-// PUT /trains/:id
-const updateTrain = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const accountId = await getAccountId(req, res);
-
-    const validatedData = trainSchema.parse(req.body);
-
-    const updatedTrain = await prisma.train.update({
-      where: {
-        id,
-      },
-      data: {
-        ...validatedData,
-        accountId,
-        exercises: {
-          set: validatedData.exercises.map((exerciseId: string) => ({
-            id: exerciseId,
-          })),
-        },
-      },
-    });
-    res.json(updatedTrain);
-  } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
-      res.status(400).json({ error: "Invalid request body" });
-    } else {
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-};
-
-// DELETE /trains/:id
-const deleteTrain = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    await prisma.train.delete({
-      where: {
-        id,
-      },
-    });
-    res.status(204).send();
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 

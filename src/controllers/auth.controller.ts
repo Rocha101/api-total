@@ -1,9 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import prisma from "../models/prisma";
+import { prisma } from "../lib/prisma";
 import { IssueData, nativeEnum, object, string } from "zod";
 import { AccountType } from "@prisma/client";
-import notificationController from "./notification.controller";
+import { ApiResponse } from "../utils/apiResponse";
+import { AppError } from "../utils/errorHandler";
+import { createDirectNotification } from "./notification.controller";
 
 const registerSchema = object({
   name: string(),
@@ -35,20 +37,17 @@ const loginSchema = object({
   password: string(),
 });
 
-const registerUser = async (req: Request, res: Response) => {
+export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    let validatedData = registerSchema.parse(req.body);
+    const validatedData = registerSchema.parse(req.body);
     const { email } = validatedData;
 
-    const user = await prisma.account.findUnique({
-      where: {
-        email,
-      },
+    const existingUser = await prisma.account.findUnique({
+      where: { email },
     });
 
-    if (user) {
-      res.status(400).json({ error: "Email já cadastrado" });
-      return;
+    if (existingUser) {
+      throw new AppError("Email já cadastrado", 400);
     }
 
     const newAccount = await prisma.account.create({
@@ -68,84 +67,86 @@ const registerUser = async (req: Request, res: Response) => {
       },
     });
 
-    await notificationController.createNotification({
+    await createDirectNotification({
       title: "Bem-vindo ao Iron Atlas",
-      message:
-        "Seja bem-vindo ao Iron Atlas, a plataforma de bodybuilding mais completa do mercado",
+      message: "Seja bem-vindo ao Iron Atlas, a plataforma de bodybuilding mais completa do mercado",
       accountId: newAccount.id,
+      type: "WELCOME",
     });
 
     if (newAccount.accountType === "CUSTOMER") {
-      await notificationController.createNotification({
+      await createDirectNotification({
         title: `Novo cliente cadastrado: ${newAccount.name}`,
         message: `O cliente ${newAccount.name} acabou de se cadastrar no Iron Atlas`,
         accountId: newAccount.coachId as string,
+        type: "NEW_CLIENT",
       });
     }
 
-    const token = jwt.sign({ account: newAccount }, "96172890", {
+    const token = jwt.sign({ account: newAccount }, process.env.JWT_SECRET || "96172890", {
       expiresIn: 4500, // expires in 45 minutes
     });
 
-    res.status(200).json({ token, account: newAccount });
-  } catch (e) {
-    res.status(500).json({ error: e });
+    return ApiResponse.created(res, { token, account: newAccount });
+  } catch (error) {
+    next(error);
   }
 };
 
-const loginUser = async (req: Request, res: Response) => {
+export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validatedData = loginSchema.parse(req.body);
     const { email, password } = validatedData;
 
     const account = await prisma.account.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
     });
 
-    if (!account || account.password !== password) {
-      res.status(400).json({ error: "Credenciais inválidas" });
-      return;
+    if (!account) {
+      throw new AppError("Email ou senha inválidos", 401);
     }
 
-    const token = jwt.sign({ account }, "96172890", {
-      expiresIn: 60 * 60 * 6, // expires in 6 hours
+    if (account.password !== password) {
+      throw new AppError("Email ou senha inválidos", 401);
+    }
+
+    const token = jwt.sign({ account }, process.env.JWT_SECRET || "96172890", {
+      expiresIn: 4500,
     });
 
-    res.status(200).json({ token, account });
-  } catch (e) {
-    res.status(500).json({ error: e });
+    return ApiResponse.success(res, { token, account });
+  } catch (error) {
+    next(error);
   }
 };
 
-const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization;
-  if (!token) {
-    res.status(400).json({ error: "Token não encontrado" });
-    return;
-  }
+export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const decoded = jwt.verify(token, "96172890") as any;
-    req.headers["account-id"] = decoded.account.id;
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      throw new AppError("Token não fornecido", 401);
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "96172890");
+    req.user = decoded;
     next();
-  } catch (e) {
-    res.status(400).json({ error: "Token inválido" });
+  } catch (error) {
+    next(new AppError("Token inválido", 401));
   }
 };
 
-const verify = async (req: Request, res: Response) => {
-  const token = req.headers.authorization;
-  if (!token) {
-    res.status(400).json({ error: "Token não encontrado" });
-    return;
-  }
+export const verify = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const decoded = jwt.verify(token, "96172890") as any;
-    res.status(200).json({ account: decoded.account });
-  } catch (e) {
-    res.status(400).json({ error: "Token inválido" });
+    return ApiResponse.success(res, { user: req.user });
+  } catch (error) {
+    next(error);
   }
 };
 
-export default { registerUser, loginUser, verifyToken, verify };
+export default {
+  registerUser,
+  loginUser,
+  verifyToken,
+  verify,
+};

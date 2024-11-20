@@ -1,62 +1,125 @@
-import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Request, Response, NextFunction } from "express";
 import { object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
+import { ApiResponse } from "../utils/apiResponse";
+import { AppError } from "../utils/errorHandler";
 
 // Zod schema for validating the request body when creating or updating a hormonal protocol
 const hormonalProtocolSchema = object({
   name: string(),
   description: string().optional(),
   protocolId: string().optional(),
+  accountId: string().optional(),
   hormones: string().array(),
 });
 
-// GET /hormonalProtocols
-const getAllHormonalProtocols = async (req: Request, res: Response) => {
+export const getAllHormonalProtocols = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const accountId = await getAccountId(req, res);
-    const hormonalProtocols = await prisma.hormonalProtocol.findMany({
-      where: {
-        accountId,
-      },
+    const protocols = await prisma.hormonalProtocol.findMany({
+      where: { accountId },
       include: {
         hormones: true,
       },
     });
-    res.json(hormonalProtocols);
+    return ApiResponse.success(res, protocols);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-// GET /hormonalProtocols/:id
-const getHormonalProtocolById = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const getHormonalProtocolById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const hormonalProtocol = await prisma.hormonalProtocol.findUnique({
-      where: {
-        id,
-      },
+    const { id } = req.params;
+    const protocol = await prisma.hormonalProtocol.findUnique({
+      where: { id },
       include: {
         hormones: true,
       },
     });
-    if (!hormonalProtocol) {
-      res.status(404).json({ error: "Hormonal protocol not found" });
-    } else {
-      res.json(hormonalProtocol);
+
+    if (!protocol) {
+      throw new AppError("Hormonal protocol not found", 404);
     }
+
+    return ApiResponse.success(res, protocol);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
-const getHormonalProtocolByProtocolId = async (req: Request, res: Response) => {
-  const { protocolId } = req.params;
+export const createHormonalProtocol = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const hormonalProtocols = await prisma.hormonalProtocol.findMany({
+    const accountId = await getAccountId(req, res);
+    const validatedData = hormonalProtocolSchema.parse(req.body);
+
+    const protocol = await prisma.hormonalProtocol.create({
+      data: {
+        ...validatedData,
+        accountId: accountId as string,
+        hormones: {
+          connect: validatedData.hormones.map((hormoneId: string) => ({
+            id: hormoneId,
+          })),
+        },
+      },
+      include: {
+        hormones: true,
+      },
+    });
+
+    return ApiResponse.created(res, protocol);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateHormonalProtocol = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const accountId = await getAccountId(req, res);
+    const validatedData = hormonalProtocolSchema.parse(req.body);
+
+    const protocol = await prisma.hormonalProtocol.update({
+      where: { id },
+      data: {
+        ...validatedData,
+        accountId: accountId as string,
+        hormones: {
+          set: validatedData.hormones.map((hormoneId: string) => ({
+            id: hormoneId,
+          })),
+        },
+      },
+      include: {
+        hormones: true,
+      },
+    });
+
+    return ApiResponse.success(res, protocol, "Hormonal protocol updated successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteHormonalProtocol = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await prisma.hormonalProtocol.delete({
+      where: { id },
+    });
+
+    return ApiResponse.success(res, null, "Hormonal protocol deleted successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getHormonalProtocolByProtocolId = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { protocolId } = req.params;
+    const protocols = await prisma.hormonalProtocol.findMany({
       where: {
         protocols: {
           some: {
@@ -68,79 +131,14 @@ const getHormonalProtocolByProtocolId = async (req: Request, res: Response) => {
         hormones: true,
       },
     });
-    res.json(hormonalProtocols);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
 
-// POST /hormonalProtocols
-const createHormonalProtocol = async (req: Request, res: Response) => {
-  try {
-    const accountId = await getAccountId(req, res);
-    const validatedData = hormonalProtocolSchema.parse(req.body);
-    const hormonalProtocol = await prisma.hormonalProtocol.create({
-      data: {
-        name: validatedData.name,
-        description: validatedData.description,
-        accountId,
-        hormones: {
-          connect: validatedData.hormones.map((id: string) => ({ id })),
-        },
-      },
-    });
-    res.status(201).json(hormonalProtocol);
-  } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
-      res.status(400).json({ error: "Invalid request body" });
-    } else {
-      res.status(500).json({ error: "Internal server error" });
+    if (!protocols) {
+      throw new AppError("Hormonal protocol not found", 404);
     }
-  }
-};
 
-// PUT /hormonalProtocols/:id
-const updateHormonalProtocol = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const accountId = await getAccountId(req, res);
-    const validatedData = hormonalProtocolSchema.parse(req.body);
-
-    const updatedHormonalProtocol = await prisma.hormonalProtocol.update({
-      where: {
-        id,
-      },
-      data: {
-        name: validatedData.name,
-        description: validatedData.description,
-        accountId,
-        hormones: {
-          set: validatedData.hormones.map((id: string) => ({ id })),
-        },
-      },
-    });
-    res.json(updatedHormonalProtocol);
+    return ApiResponse.success(res, protocols);
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
-      res.status(400).json({ error: "Invalid request body" });
-    } else {
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-};
-
-// DELETE /hormonalProtocols/:id
-const deleteHormonalProtocol = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    await prisma.hormonalProtocol.delete({
-      where: {
-        id,
-      },
-    });
-    res.status(204).send();
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    next(error);
   }
 };
 
