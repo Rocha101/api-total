@@ -1,9 +1,10 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import { object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import { prisma } from "../lib/prisma";
-import { ApiResponse } from "../utils/apiResponse";
-import { AppError } from "../utils/errorHandler";
+import notificationController from "./notification.controller";
+
+const prisma = new PrismaClient();
 
 // Zod schema for validating the request body when creating or updating a protocol
 const protocolSchema = object({
@@ -18,7 +19,7 @@ const protocolSchema = object({
 });
 
 // GET /protocols
-export const getAllProtocols = async (req: Request, res: Response, next: NextFunction) => {
+const getAllProtocols = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const protocols = await prisma.protocol.findMany({
@@ -32,13 +33,13 @@ export const getAllProtocols = async (req: Request, res: Response, next: NextFun
         extraCompounds: true,
       },
     });
-    return ApiResponse.success(res, protocols);
+    res.json(protocols);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getProtocolsCount = async (req: Request, res: Response, next: NextFunction) => {
+const getProtocolsCount = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const count = await prisma.protocol.count({
@@ -46,16 +47,16 @@ export const getProtocolsCount = async (req: Request, res: Response, next: NextF
         accountId,
       },
     });
-    return ApiResponse.success(res, { count });
+    res.json(count);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 // GET /protocols/:id
-export const getProtocolById = async (req: Request, res: Response, next: NextFunction) => {
+const getProtocolById = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const protocol = await prisma.protocol.findUnique({
       where: {
         id,
@@ -67,21 +68,20 @@ export const getProtocolById = async (req: Request, res: Response, next: NextFun
         extraCompounds: true,
       },
     });
-
     if (!protocol) {
-      throw new AppError("Protocol not found", 404);
+      res.status(404).json({ error: "Protocol not found" });
+    } else {
+      res.json(protocol);
     }
-
-    return ApiResponse.success(res, protocol);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getProtocolByClientId = async (req: Request, res: Response, next: NextFunction) => {
+const getProtocolByClientId = async (req: Request, res: Response) => {
+  const { clientId } = req.params;
   try {
-    const { clientId } = req.params;
-    const protocols = await prisma.protocol.findMany({
+    const protocol = await prisma.protocol.findMany({
       where: {
         clientId: clientId as string,
       },
@@ -92,23 +92,21 @@ export const getProtocolByClientId = async (req: Request, res: Response, next: N
         extraCompounds: true,
       },
     });
-
-    if (!protocols.length) {
-      throw new AppError("No protocols found for this client", 404);
+    if (!protocol) {
+      res.status(404).json({ error: "Protocol not found" });
+    } else {
+      res.json(protocol[0]);
     }
-
-    return ApiResponse.success(res, protocols[0]);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 // POST /protocols
-export const createProtocol = async (req: Request, res: Response, next: NextFunction) => {
+const createProtocol = async (req: Request, res: Response) => {
   try {
-    const validatedData = protocolSchema.parse(req.body);
     const accountId = await getAccountId(req, res);
-
+    const validatedData = protocolSchema.parse(req.body);
     const protocol = await prisma.protocol.create({
       data: {
         name: validatedData.name,
@@ -148,37 +146,31 @@ export const createProtocol = async (req: Request, res: Response, next: NextFunc
           },
         }),
       },
-      include: {
-        diets: true,
-        trains: true,
-        hormonalProtocols: true,
-        extraCompounds: true,
-      },
     });
 
-    return ApiResponse.created(res, protocol);
+    await notificationController.createNotification({
+      title: "Novo protocolo atribuido a você",
+      message: `O protocolo ${protocol.name} foi atribuido a você`,
+      accountId: validatedData.clientId as string,
+    });
+
+    res.status(201).json(protocol);
   } catch (error) {
-    next(error);
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 
 // PUT /protocols/:id
-export const updateProtocol = async (req: Request, res: Response, next: NextFunction) => {
+const updateProtocol = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
+    const accountId = await getAccountId(req, res);
     const validatedData = protocolSchema.parse(req.body);
-
-    const existingProtocol = await prisma.protocol.findUnique({
-      where: {
-        id,
-      },
-    });
-
-    if (!existingProtocol) {
-      throw new AppError("Protocol not found", 404);
-    }
-
-    const protocol = await prisma.protocol.update({
+    const updatedProtocol = await prisma.protocol.update({
       where: {
         id,
       },
@@ -188,7 +180,7 @@ export const updateProtocol = async (req: Request, res: Response, next: NextFunc
         clientId: validatedData.clientId,
         account: {
           connect: {
-            id: await getAccountId(req, res),
+            id: accountId,
           },
         },
         ...(validatedData.diet && {
@@ -220,53 +212,45 @@ export const updateProtocol = async (req: Request, res: Response, next: NextFunc
           },
         }),
       },
-      include: {
-        diets: true,
-        trains: true,
-        hormonalProtocols: true,
-        extraCompounds: true,
-      },
     });
 
-    return ApiResponse.success(res, protocol, "Protocol updated successfully");
+    await notificationController.createNotification({
+      title: "Protocolo atualizado",
+      message: `O seu protocolo foi atualizado`,
+      accountId: validatedData.clientId as string,
+    });
+
+    res.json(updatedProtocol);
   } catch (error) {
-    next(error);
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 
 // DELETE /protocols/:id
-export const deleteProtocol = async (req: Request, res: Response, next: NextFunction) => {
+const deleteProtocol = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-
-    const existingProtocol = await prisma.protocol.findUnique({
-      where: {
-        id,
-      },
-    });
-
-    if (!existingProtocol) {
-      throw new AppError("Protocol not found", 404);
-    }
-
     await prisma.protocol.delete({
       where: {
         id,
       },
     });
-
-    return ApiResponse.success(res, null, "Protocol deleted successfully");
+    res.status(204).send();
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 export default {
   getAllProtocols,
   getProtocolById,
-  getProtocolByClientId,
-  getProtocolsCount,
   createProtocol,
   updateProtocol,
   deleteProtocol,
+  getProtocolByClientId,
+  getProtocolsCount,
 };

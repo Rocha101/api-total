@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import { object, string, number, enum as enumValidator } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import { prisma } from "../lib/prisma";
-import { ApiResponse } from "../utils/apiResponse";
-import { AppError } from "../utils/errorHandler";
+
+const prisma = new PrismaClient();
 
 // Zod schema for validating the request body when creating or updating a food
 const foodSchema = object({
@@ -19,83 +19,98 @@ const foodSchema = object({
   accountId: string().optional(),
 });
 
-export const getAllFoods = async (req: Request, res: Response, next: NextFunction) => {
+// GET /foods
+const getAllFoods = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const foods = await prisma.food.findMany({
-      where: { accountId },
+      where: {
+        accountId,
+      },
     });
-    return ApiResponse.success(res, foods);
+    res.json(foods);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getFoodById = async (req: Request, res: Response, next: NextFunction) => {
+// GET /foods/:id
+const getFoodById = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const food = await prisma.food.findUnique({
-      where: { id },
+      where: {
+        id,
+      },
     });
-
     if (!food) {
-      throw new AppError("Food not found", 404);
+      res.status(404).json({ error: "Food not found" });
+    } else {
+      res.json(food);
     }
-
-    return ApiResponse.success(res, food);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const createFood = async (req: Request, res: Response, next: NextFunction) => {
+// POST /foods
+const createFood = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const validatedData = foodSchema.parse(req.body);
-
     const food = await prisma.food.create({
       data: {
         ...validatedData,
-        accountId: accountId as string,
+        accountId,
       },
     });
-
-    return ApiResponse.created(res, food);
+    res.status(201).json(food);
   } catch (error) {
-    next(error);
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 
-export const updateFood = async (req: Request, res: Response, next: NextFunction) => {
+// PUT /foods/:id
+const updateFood = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const accountId = await getAccountId(req, res);
     const validatedData = foodSchema.parse(req.body);
-
-    const food = await prisma.food.update({
-      where: { id },
+    const updatedFood = await prisma.food.update({
+      where: {
+        id,
+      },
       data: {
         ...validatedData,
-        accountId: accountId as string,
+        accountId,
       },
     });
-
-    return ApiResponse.success(res, food, "Food updated successfully");
+    res.json(updatedFood);
   } catch (error) {
-    next(error);
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 
-export const deleteFood = async (req: Request, res: Response, next: NextFunction) => {
+// DELETE /foods/:id
+const deleteFood = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     await prisma.food.delete({
-      where: { id },
+      where: {
+        id,
+      },
     });
-
-    return ApiResponse.success(res, null, "Food deleted successfully");
+    res.status(204).send();
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 

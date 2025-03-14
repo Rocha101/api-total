@@ -1,9 +1,7 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { getAccountId } from "../utils/getAccountId";
 import { object, string } from "zod";
-import { prisma } from "../lib/prisma";
-import { ApiResponse } from "../utils/apiResponse";
-import { AppError } from "../utils/errorHandler";
+import prisma from "../models/prisma";
 
 const subscriptionSchema = object({
   planId: string(),
@@ -13,124 +11,164 @@ const subscriptionIdSchema = object({
   activationId: string(),
 });
 
-export const createSubscription = async (req: Request, res: Response, next: NextFunction) => {
+const createSubscription = async (req: Request, res: Response) => {
   try {
-    const accountId = await getAccountId(req, res);
     const validatedData = subscriptionSchema.parse(req.body);
+    const plan = await prisma.plan.findUnique({
+      where: { id: validatedData.planId },
+    });
+
+    if (!plan) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
 
     const subscription = await prisma.subscription.create({
       data: {
-        planId: validatedData.planId,
-        accountId: accountId as string,
+        expiresAt: new Date(
+          new Date().setMonth(new Date().getMonth() + plan.duration)
+        ),
+        plan: {
+          connect: {
+            id: validatedData.planId,
+          },
+        },
       },
-      include: {
-        plan: true,
-        account: true,
-      },
+      include: { plan: true },
     });
 
-    return ApiResponse.created(res, subscription);
+    return res.status(201).json(subscription);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Failed to create subscription" });
   }
 };
 
-export const getSubscriptionById = async (req: Request, res: Response, next: NextFunction) => {
+const getSubscriptions = async (req: Request, res: Response) => {
+  try {
+    const subscriptions = await prisma.subscription.findMany({
+      include: { plan: true, account: true },
+    });
+
+    const now = new Date();
+    const validSubscriptions = subscriptions.filter((subscription) => {
+      if (!subscription.plan) return false;
+      const createdAt = new Date(subscription.createdAt);
+      const expiresAt = new Date(createdAt);
+      expiresAt.setMonth(createdAt.getMonth() + subscription.plan.duration);
+      return now < expiresAt;
+    });
+
+    const expiredSubscriptions = subscriptions.filter((subscription) => {
+      if (!subscription.plan) return false;
+      const createdAt = new Date(subscription.createdAt);
+      const expiresAt = new Date(createdAt);
+      expiresAt.setMonth(createdAt.getMonth() + subscription.plan.duration);
+      return now > expiresAt;
+    });
+
+    res.status(200).json({
+      validSubscriptions,
+      expiredSubscriptions,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch subscriptions" });
+  }
+};
+
+const verifySubscription = async (req: Request, res: Response) => {
+  try {
+    const { id: accountId } = req.params;
+    const subscription = await prisma.subscription.findFirst({
+      where: {
+        accountId,
+      },
+      include: { plan: true },
+    });
+    if (!subscription) {
+      return res.status(404).json({ error: "Subscription not found" });
+    }
+
+    if (!subscription.plan) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
+    const now = new Date();
+    const createdAt = new Date(subscription.createdAt);
+    const expiresAt = new Date(createdAt);
+    expiresAt.setMonth(createdAt.getMonth() + subscription.plan.duration);
+
+    if (now > expiresAt) {
+      return res.status(403).json({ error: "Subscription expired" });
+    }
+    res.status(200).json(subscription);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch subscription" });
+  }
+};
+
+const getSubscriptionById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const subscription = await prisma.subscription.findUnique({
       where: { id },
-      include: {
-        plan: true,
-        account: true,
-      },
+      include: { plan: true },
     });
-
     if (!subscription) {
-      throw new AppError("Subscription not found", 404);
+      return res.status(404).json({ error: "Subscription not found" });
     }
-
-    return ApiResponse.success(res, subscription);
+    res.status(200).json(subscription);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Failed to fetch subscription" });
   }
 };
 
-export const verifySubscription = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const accountId = await getAccountId(req, res);
-    const subscription = await prisma.subscription.findFirst({
-      where: { accountId },
-      include: {
-        plan: true,
-      },
-    });
-
-    if (!subscription) {
-      throw new AppError("No active subscription found", 404);
-    }
-
-    return ApiResponse.success(res, subscription);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getSubscriptions = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const subscriptions = await prisma.subscription.findMany({
-      include: {
-        plan: true,
-        account: true,
-      },
-    });
-
-    return ApiResponse.success(res, subscriptions);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const changeSubscription = async (req: Request, res: Response, next: NextFunction) => {
+const changeSubscription = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const validatedData = subscriptionIdSchema.parse(req.body);
 
-    const currentSubscription = await prisma.subscription.findFirst({
-      where: { accountId },
+    const newSubscription = await prisma.subscription.findUnique({
+      where: { id: validatedData.activationId },
+      include: { plan: true },
     });
 
-    if (!currentSubscription) {
-      throw new AppError("No active subscription found", 404);
+    if (!newSubscription) {
+      return res.status(404).json({ error: "Subscription not found" });
     }
 
-    const updatedSubscription = await prisma.subscription.update({
-      where: { id: currentSubscription.id },
+    if (!newSubscription.plan) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
+    const accountWithNewSubscription = await prisma.account.update({
+      where: { id: accountId },
       data: {
-        id: validatedData.activationId,
+        subscriptions: {
+          set: {
+            id: newSubscription.id,
+          },
+        },
       },
       include: {
-        plan: true,
-        account: true,
+        subscriptions: {
+          include: { plan: true },
+        },
       },
     });
-
-    return ApiResponse.success(res, updatedSubscription, "Subscription updated successfully");
+    return res.status(200).json(accountWithNewSubscription);
   } catch (error) {
-    next(error);
+    return res.status(500).json({ error: "Failed to update subscription" });
   }
 };
 
-export const deleteSubscription = async (req: Request, res: Response, next: NextFunction) => {
+const deleteSubscription = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await prisma.subscription.delete({
+    const subscription = await prisma.subscription.delete({
       where: { id },
     });
-
-    return ApiResponse.success(res, null, "Subscription deleted successfully");
+    res.status(200).json(subscription);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Failed to delete subscription" });
   }
 };
 

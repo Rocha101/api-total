@@ -35,7 +35,6 @@ model Account {
   subscriptions     Subscription[]
   plans             Plan[]
   notification      Notification[]
-  bodyProgress      BodyProgress[]
 }
 
 model Notification {
@@ -198,7 +197,7 @@ model Meal {
   name          String
   description   String?
   foods         Food[]
-  mealType      MealType?
+  mealType      MealType
   totalCalories Float?
   totalProteins Float?
   totalCarbs    Float?
@@ -304,52 +303,4 @@ model Protocol {
   clientId          String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-}
-
-model BodyProgress {
-  id           String          @id @default(cuid())
-  weight       Float
-  height       Float
-  bodyFat      Float?
-  notes        String?
-  images       ProgressImage[]
-  measurements Measurements?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  account      Account         @relation(fields: [accountId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  accountId    String
-}
-
-model Measurements {
-  id             String       @id @default(cuid())
-  chest          Float?
-  waist          Float?
-  hips           Float?
-  bicepsLeft     Float?
-  bicepsRight    Float?
-  thighLeft      Float?
-  thighRight     Float?
-  calfLeft       Float?
-  calfRight      Float?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  bodyProgress   BodyProgress @relation(fields: [bodyProgressId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  bodyProgressId String       @unique
-}
-
-model ProgressImage {
-  id             String       @id @default(cuid())
-  url            String
-  type           ImageType
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  bodyProgress   BodyProgress @relation(fields: [bodyProgressId], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  bodyProgressId String
-}
-
-enum ImageType {
-  FRONT
-  BACK
-  SIDE_LEFT
-  SIDE_RIGHT
 }

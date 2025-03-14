@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import { object, string } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import { prisma } from "../lib/prisma";
-import { ApiResponse } from "../utils/apiResponse";
-import { AppError } from "../utils/errorHandler";
+
+const prisma = new PrismaClient();
 
 // Zod schema for validating the request body when creating or updating a diet
 const dietSchema = object({
@@ -14,30 +14,33 @@ const dietSchema = object({
   meals: string().array(),
 });
 
-export const getAllDiets = async (req: Request, res: Response, next: NextFunction) => {
+// GET /diets
+const getAllDiets = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
+
     const diets = await prisma.diet.findMany({
-      where: { accountId },
+      where: {
+        accountId,
+      },
       include: {
-        meals: {
-          include: {
-            foods: true,
-          },
-        },
+        meals: true,
       },
     });
-    return ApiResponse.success(res, diets);
+    res.json(diets);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getDietById = async (req: Request, res: Response, next: NextFunction) => {
+// GET /diets/:id
+const getDietById = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const diet = await prisma.diet.findUnique({
-      where: { id },
+      where: {
+        id,
+      },
       include: {
         meals: {
           include: {
@@ -46,95 +49,19 @@ export const getDietById = async (req: Request, res: Response, next: NextFunctio
         },
       },
     });
-
     if (!diet) {
-      throw new AppError("Diet not found", 404);
+      res.status(404).json({ error: "Diet not found" });
+    } else {
+      res.json(diet);
     }
-
-    return ApiResponse.success(res, diet);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const createDiet = async (req: Request, res: Response, next: NextFunction) => {
+const getDietByProtocolId = async (req: Request, res: Response) => {
+  const { protocolId } = req.params;
   try {
-    const accountId = await getAccountId(req, res);
-    const validatedData = dietSchema.parse(req.body);
-
-    const diet = await prisma.diet.create({
-      data: {
-        ...validatedData,
-        accountId: accountId as string,
-        meals: {
-          connect: validatedData.meals.map((mealId: string) => ({
-            id: mealId,
-          })),
-        },
-      },
-      include: {
-        meals: {
-          include: {
-            foods: true,
-          },
-        },
-      },
-    });
-
-    return ApiResponse.created(res, diet);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const updateDiet = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const validatedData = dietSchema.parse(req.body);
-    const accountId = await getAccountId(req, res);
-
-    const diet = await prisma.diet.update({
-      where: { id },
-      data: {
-        ...validatedData,
-        accountId: accountId as string,
-        meals: {
-          set: validatedData.meals.map((mealId: string) => ({
-            id: mealId,
-          })),
-        },
-      },
-      include: {
-        meals: {
-          include: {
-            foods: true,
-          },
-        },
-      },
-    });
-
-    return ApiResponse.success(res, diet, "Diet updated successfully");
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const deleteDiet = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    await prisma.diet.delete({
-      where: { id },
-    });
-
-    return ApiResponse.success(res, null, "Diet deleted successfully");
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getDietByProtocolId = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { protocolId } = req.params;
     const diets = await prisma.diet.findMany({
       where: {
         protocols: {
@@ -151,14 +78,86 @@ export const getDietByProtocolId = async (req: Request, res: Response, next: Nex
         },
       },
     });
-
     if (!diets) {
-      throw new AppError("Diet not found", 404);
+      res.status(404).json({ error: "Diet not found" });
+    } else {
+      res.json(diets);
     }
-
-    return ApiResponse.success(res, diets);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// POST /diets
+const createDiet = async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req, res);
+
+    const validatedData = dietSchema.parse(req.body);
+    const diet = await prisma.diet.create({
+      data: {
+        ...validatedData,
+        accountId: accountId as string,
+        meals: {
+          connect: validatedData.meals.map((mealId: string) => ({
+            id: mealId,
+          })),
+        },
+      },
+    });
+    res.status(201).json(diet);
+  } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+};
+
+// PUT /diets/:id
+const updateDiet = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const accountId = await getAccountId(req, res);
+    const validatedData = dietSchema.parse(req.body);
+
+    const updatedDiet = await prisma.diet.update({
+      where: {
+        id,
+      },
+      data: {
+        ...validatedData,
+        accountId,
+        meals: {
+          set: validatedData.meals.map((mealId: string) => ({
+            id: mealId,
+          })),
+        },
+      },
+    });
+    res.json(updatedDiet);
+  } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+};
+
+// DELETE /diets/:id
+const deleteDiet = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await prisma.diet.delete({
+      where: {
+        id,
+      },
+    });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 

@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import { object, string, number, enum as enumValidator } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import { prisma } from "../lib/prisma";
-import { ApiResponse } from "../utils/apiResponse";
-import { AppError } from "../utils/errorHandler";
+
+const prisma = new PrismaClient();
 
 // Zod schema for validating the request body when creating or updating an extra compound
 const extraCompoundSchema = object({
@@ -20,36 +20,64 @@ const extraCompoundSchema = object({
   protocolId: string().optional(),
 });
 
-export const getAllExtraCompounds = async (req: Request, res: Response, next: NextFunction) => {
+// GET /extraCompounds
+const getAllExtraCompounds = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const extraCompounds = await prisma.extraCompounds.findMany({
-      where: { accountId },
+      where: {
+        accountId,
+      },
     });
-    return ApiResponse.success(res, extraCompounds);
+    res.json(extraCompounds);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getExtraCompoundById = async (req: Request, res: Response, next: NextFunction) => {
+// GET /extraCompounds/:id
+const getExtraCompoundById = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const extraCompound = await prisma.extraCompounds.findUnique({
-      where: { id },
+      where: {
+        id,
+      },
     });
-
     if (!extraCompound) {
-      throw new AppError("Extra compound not found", 404);
+      res.status(404).json({ error: "Extra compound not found" });
+    } else {
+      res.json(extraCompound);
     }
-
-    return ApiResponse.success(res, extraCompound);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const createExtraCompound = async (req: Request, res: Response, next: NextFunction) => {
+const getExtraCompoundByProtocolId = async (req: Request, res: Response) => {
+  const { protocolId } = req.params;
+  try {
+    const extraCompounds = await prisma.extraCompounds.findMany({
+      where: {
+        protocols: {
+          some: {
+            id: protocolId,
+          },
+        },
+      },
+    });
+    if (!extraCompounds) {
+      res.status(404).json({ error: "Extra compound not found" });
+    } else {
+      res.json(extraCompounds);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// POST /extraCompounds
+const createExtraCompound = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const validatedData = extraCompoundSchema.parse(req.body);
@@ -60,66 +88,54 @@ export const createExtraCompound = async (req: Request, res: Response, next: Nex
         accountId: accountId as string,
       },
     });
-
-    return ApiResponse.created(res, extraCompound);
+    res.status(201).json(extraCompound);
   } catch (error) {
-    next(error);
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body", details: error });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 
-export const updateExtraCompound = async (req: Request, res: Response, next: NextFunction) => {
+// PUT /extraCompounds/:id
+const updateExtraCompound = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const accountId = await getAccountId(req, res);
-    const validatedData = extraCompoundSchema.parse(req.body);
 
-    const extraCompound = await prisma.extraCompounds.update({
-      where: { id },
+    const validatedData = extraCompoundSchema.parse(req.body);
+    const updatedExtraCompound = await prisma.extraCompounds.update({
+      where: {
+        id,
+      },
       data: {
         ...validatedData,
         accountId: accountId as string,
       },
     });
-
-    return ApiResponse.success(res, extraCompound, "Extra compound updated successfully");
+    res.json(updatedExtraCompound);
   } catch (error) {
-    next(error);
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error", details: error });
+    }
   }
 };
 
-export const deleteExtraCompound = async (req: Request, res: Response, next: NextFunction) => {
+// DELETE /extraCompounds/:id
+const deleteExtraCompound = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     await prisma.extraCompounds.delete({
-      where: { id },
-    });
-
-    return ApiResponse.success(res, null, "Extra compound deleted successfully");
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getExtraCompoundByProtocolId = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { protocolId } = req.params;
-    const extraCompounds = await prisma.extraCompounds.findMany({
       where: {
-        protocols: {
-          some: {
-            id: protocolId,
-          },
-        },
+        id,
       },
     });
-
-    if (!extraCompounds) {
-      throw new AppError("Extra compound not found", 404);
-    }
-
-    return ApiResponse.success(res, extraCompounds);
+    res.status(204).send();
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 

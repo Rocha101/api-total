@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import { object, string, number, enum as enumValidator } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import { prisma } from "../lib/prisma";
-import { ApiResponse } from "../utils/apiResponse";
-import { AppError } from "../utils/errorHandler";
+
+const prisma = new PrismaClient();
 
 // Zod schema for validating the request body when creating or updating a hormone
 const hormoneSchema = object({
@@ -25,83 +25,98 @@ const hormoneSchema = object({
   accountId: string().optional(),
 });
 
-export const getAllHormones = async (req: Request, res: Response, next: NextFunction) => {
+// GET /hormones
+const getAllHormones = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const hormones = await prisma.hormone.findMany({
-      where: { accountId },
+      where: {
+        accountId,
+      },
     });
-    return ApiResponse.success(res, hormones);
+    res.json(hormones);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getHormoneById = async (req: Request, res: Response, next: NextFunction) => {
+// GET /hormones/:id
+const getHormoneById = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const hormone = await prisma.hormone.findUnique({
-      where: { id },
+      where: {
+        id,
+      },
     });
-
     if (!hormone) {
-      throw new AppError("Hormone not found", 404);
+      res.status(404).json({ error: "Hormone not found" });
+    } else {
+      res.json(hormone);
     }
-
-    return ApiResponse.success(res, hormone);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const createHormone = async (req: Request, res: Response, next: NextFunction) => {
+// POST /hormones
+const createHormone = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const validatedData = hormoneSchema.parse(req.body);
-
     const hormone = await prisma.hormone.create({
       data: {
         ...validatedData,
-        accountId: accountId as string,
+        accountId,
       },
     });
-
-    return ApiResponse.created(res, hormone);
+    res.status(201).json(hormone);
   } catch (error) {
-    next(error);
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 
-export const updateHormone = async (req: Request, res: Response, next: NextFunction) => {
+// PUT /hormones/:id
+const updateHormone = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const accountId = await getAccountId(req, res);
     const validatedData = hormoneSchema.parse(req.body);
-
-    const hormone = await prisma.hormone.update({
-      where: { id },
+    const updatedHormone = await prisma.hormone.update({
+      where: {
+        id,
+      },
       data: {
         ...validatedData,
-        accountId: accountId as string,
+        accountId,
       },
     });
-
-    return ApiResponse.success(res, hormone, "Hormone updated successfully");
+    res.json(updatedHormone);
   } catch (error) {
-    next(error);
+    if (error instanceof Error && error.name === "ZodError") {
+      res.status(400).json({ error: "Invalid request body" });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 
-export const deleteHormone = async (req: Request, res: Response, next: NextFunction) => {
+// DELETE /hormones/:id
+const deleteHormone = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     await prisma.hormone.delete({
-      where: { id },
+      where: {
+        id,
+      },
     });
-
-    return ApiResponse.success(res, null, "Hormone deleted successfully");
+    res.status(204).send();
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 

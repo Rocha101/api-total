@@ -1,11 +1,14 @@
-import { Request, Response, NextFunction } from "express";
-import { ExerciseType, MuscleGroup, SetType } from "@prisma/client";
+import { Request, Response } from "express";
+import {
+  ExerciseType,
+  MuscleGroup,
+  PrismaClient,
+  SetType,
+} from "@prisma/client";
 import { z } from "zod";
 import { getAccountId } from "../utils/getAccountId";
-import { prisma } from "../lib/prisma";
-import { ApiResponse } from "../utils/apiResponse";
-import { AppError } from "../utils/errorHandler";
 
+const prisma = new PrismaClient();
 // Define Zod schema for request body validation
 const exerciseSchema = z.object({
   name: z.string(),
@@ -24,30 +27,14 @@ const exerciseSchema = z.object({
   ),
 });
 
-export const getAllExercises = async (req: Request, res: Response, next: NextFunction) => {
+// GET /exercises
+const getAllExercises = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const exercises = await prisma.exercise.findMany({
-      where: { accountId },
-      include: {
-        sets: {
-          include: {
-            reps: true,
-          },
-        },
+      where: {
+        accountId,
       },
-    });
-    return ApiResponse.success(res, exercises);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getExerciseById = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const exercise = await prisma.exercise.findUnique({
-      where: { id },
       include: {
         sets: {
           include: {
@@ -58,51 +45,59 @@ export const getExerciseById = async (req: Request, res: Response, next: NextFun
         account: true,
       },
     });
-
-    if (!exercise) {
-      throw new AppError("Exercise not found", 404);
-    }
-
-    return ApiResponse.success(res, exercise);
+    res.json(exercises);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-const deleteRepsAndSets = async (exerciseId: string) => {
-  const sets = await prisma.sets.findMany({
-    where: { exerciseId },
-    include: { reps: true },
-  });
-
-  for (const set of sets) {
-    await prisma.reps.deleteMany({
-      where: { setsId: set.id },
+// GET /exercises/:id
+const getExerciseById = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const exercise = await prisma.exercise.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        sets: {
+          include: {
+            reps: true,
+          },
+        },
+        trains: true,
+        account: true,
+      },
     });
+    if (!exercise) {
+      res.status(404).json({ error: "Exercise not found" });
+    } else {
+      res.json(exercise);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
   }
-
-  await prisma.sets.deleteMany({
-    where: { exerciseId },
-  });
 };
 
-export const createExercise = async (req: Request, res: Response, next: NextFunction) => {
+// POST /exercises
+const createExercise = async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req, res);
     const exerciseData = exerciseSchema.parse(req.body);
 
+    // Create Exercise
     const exercise = await prisma.exercise.create({
       data: {
         name: exerciseData.name,
         description: exerciseData.description,
-        type: exerciseData.type as ExerciseType,
-        muscleGroup: exerciseData.muscleGroup as MuscleGroup,
+        type: exerciseData.type as any,
+        muscleGroup: exerciseData.muscleGroup as any,
         equipment: exerciseData.equipment,
         accountId: accountId as string,
         sets: {
-          create: exerciseData.sets.map((rep) => ({
+          create: exerciseData.sets.map((set: any) => ({
             reps: {
-              create: rep,
+              create: set,
             },
           })),
         },
@@ -110,13 +105,32 @@ export const createExercise = async (req: Request, res: Response, next: NextFunc
       include: { sets: { include: { reps: true } } },
     });
 
-    return ApiResponse.created(res, exercise);
+    res.json(exercise);
   } catch (error) {
-    next(error);
+    if (error instanceof z.ZodError) {
+      console.error("Validation failed:", error);
+      res
+        .status(400)
+        .json({ error: "Validation Error", details: error.errors });
+    } else {
+      console.error("Error creating Exercise:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
   }
 };
 
-export const updateExercise = async (req: Request, res: Response, next: NextFunction) => {
+const deleteRepsAndSets = async (exerciseId: string) => {
+  await prisma.reps.deleteMany({
+    where: { sets: { exerciseId } },
+  });
+
+  await prisma.sets.deleteMany({
+    where: { exerciseId },
+  });
+};
+
+// PUT /exercises/:id
+const updateExercise = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const accountId = await getAccountId(req, res);
@@ -125,12 +139,14 @@ export const updateExercise = async (req: Request, res: Response, next: NextFunc
     await deleteRepsAndSets(id);
 
     const exercise = await prisma.exercise.update({
-      where: { id },
+      where: {
+        id,
+      },
       data: {
         name: exerciseData.name,
         description: exerciseData.description,
-        type: exerciseData.type as ExerciseType,
-        muscleGroup: exerciseData.muscleGroup as MuscleGroup,
+        type: exerciseData.type as any,
+        muscleGroup: exerciseData.muscleGroup as any,
         equipment: exerciseData.equipment,
         accountId: accountId as string,
         sets: {
@@ -144,23 +160,32 @@ export const updateExercise = async (req: Request, res: Response, next: NextFunc
       include: { sets: { include: { reps: true } } },
     });
 
-    return ApiResponse.success(res, exercise, "Exercise updated successfully");
+    res.json(exercise);
   } catch (error) {
-    next(error);
+    if (error instanceof z.ZodError) {
+      console.error("Validation failed:", error);
+      res
+        .status(400)
+        .json({ error: "Validation Error", details: error.errors });
+    } else {
+      console.error("Error creating Exercise:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
   }
 };
 
-export const deleteExercise = async (req: Request, res: Response, next: NextFunction) => {
+// DELETE /exercises/:id
+const deleteExercise = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-    await deleteRepsAndSets(id);
     await prisma.exercise.delete({
-      where: { id },
+      where: {
+        id,
+      },
     });
-
-    return ApiResponse.success(res, null, "Exercise deleted successfully");
+    res.status(204).send();
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "Internal server error", details: error });
   }
 };
 
