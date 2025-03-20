@@ -15,7 +15,7 @@ const extraCompoundSchema = object({
     required_error: "Quantidade é obrigatória",
   }),
   concentration: number().optional(),
-  unit: enumValidator(["MG", "ML", "UI", "UNIT"]),
+  unit: enumValidator(["MG", "ML", "UI", "UNIT", "GR", "MCG"]),
   concentrationUnit: enumValidator(["MG_ML", "MG"]).optional(),
   protocolId: string().optional(),
 });

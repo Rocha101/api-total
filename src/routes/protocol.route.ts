@@ -28,4 +28,10 @@ router.put(
 );
 router.post("/", AuthController.verifyToken, protocolController.createProtocol);
 
+router.post(
+  "/createFullProtocol",
+  AuthController.verifyToken,
+  protocolController.createFullProtocol
+);
+
 export default router;

@@ -240,6 +240,8 @@ enum HormoneUnit {
   ML
   UI
   UNIT
+  GR
+  MCG
 }
 
 model Hormone {
